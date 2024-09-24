@@ -154,6 +154,8 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 	}
 
 	public boolean sendResponse(@NotNull CCEffectResponse response) {
+		if (response.getStatus() == ResponseStatus.DELAY_ESTIMATED) return false; // unused
+		eventManager.dispatch(CCEventType.EFFECT_RESPONSE, response);
 		return sendRPC(new CallData<>(
 			CallDataMethod.EFFECT_RESPONSE,
 			Collections.singletonList(response)

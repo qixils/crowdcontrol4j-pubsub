@@ -10,7 +10,6 @@ import org.java_websocket.handshake.ServerHandshake;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
-import java.util.UUID;
 
 public class CCEventType<T> {
 	private final @NotNull String listenerId;
@@ -111,7 +110,7 @@ public class CCEventType<T> {
 	public static final CCEventType<SubscriptionResultPayload> SUBSCRIBED = new CCEventType<>("subscribed", SubscriptionResultPayload.class);
 
 	/**
-	 * Called when {@link CrowdControl#sendResult(UUID, CCEffectResponse)} has been called.
+	 * Called when {@link CCPlayer#sendResponse(CCEffectResponse)} has been called.
 	 */
-	public static final CCEventType<CCEffectResponse> EFFECT_RESULT = new CCEventType<>("effect_result", CCEffectResponse.class);
+	public static final CCEventType<CCEffectResponse> EFFECT_RESPONSE = new CCEventType<>("effect_result", CCEffectResponse.class);
 }

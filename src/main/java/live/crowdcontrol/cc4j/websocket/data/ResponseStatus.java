@@ -16,42 +16,42 @@ public enum ResponseStatus {
 	/**
 	 * The non-timed effect executed successfully.
 	 */
-	SUCCESS("success", false),
+	SUCCESS("success", false, true),
 	/**
 	 * The effect failed to execute but may work another time.
 	 */
-	FAIL_TEMPORARY("failTemporary", false),
+	FAIL_TEMPORARY("failTemporary", false, true),
 	/**
 	 * The effect failed to execute and should <i>never be requested again</i>
 	 * (at least for this session).
 	 */
-	FAIL_PERMANENT("failPermanent", false),
+	FAIL_PERMANENT("failPermanent", false, true),
 	/**
 	 * The effect could not be applied instantly but is expecting to apply soon.
 	 * This is currently unused.
 	 */
-	DELAY_ESTIMATED("delayEstimated", true),
+	DELAY_ESTIMATED("delayEstimated", true, false),
 	/**
 	 * The timed effect began successfully.
 	 */
-	TIMED_BEGIN("timedBegin", true),
+	TIMED_BEGIN("timedBegin", true, true),
 	/**
 	 * The timed effect has been paused.
 	 */
-	TIMED_PAUSE("timedPause", true),
+	TIMED_PAUSE("timedPause", true, false),
 	/**
 	 * The timed effect has been resumed.
 	 */
-	TIMED_RESUME("timedResume", true),
+	TIMED_RESUME("timedResume", true, false),
 	/**
 	 * The timed effect has ended.
 	 */
-	TIMED_END("timedEnd", true),
+	TIMED_END("timedEnd", true, false),
 	/**
 	 * The JSON-specified value could not be decoded.
 	 */
 	@JsonEnumDefaultValue
-	UNKNOWN("", false),
+	UNKNOWN("", false, true), // ig terminating?
 	;
 
 	// Static
@@ -83,10 +83,12 @@ public enum ResponseStatus {
 
 	private final @NotNull String value;
 	private final boolean timed;
+	private final boolean terminating;
 
-	ResponseStatus(@NotNull String value, boolean timed) {
+	ResponseStatus(@NotNull String value, boolean timed, boolean terminating) {
 		this.value = value;
 		this.timed = timed;
+		this.terminating = terminating;
 	}
 
 	/**
@@ -108,6 +110,16 @@ public enum ResponseStatus {
 	 */
 	public boolean isTimed() {
 		return timed;
+	}
+
+	/**
+	 * Gets whether this status represents a terminating status.
+	 * A terminating status is one that finalizes whether an effect should consume or refund coins.
+	 *
+	 * @return is terminating status
+	 */
+	public boolean isTerminating() {
+		return terminating;
 	}
 
 	@Override

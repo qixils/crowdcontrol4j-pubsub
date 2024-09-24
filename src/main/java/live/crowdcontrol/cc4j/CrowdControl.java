@@ -11,9 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
@@ -28,6 +26,7 @@ public class CrowdControl {
 	private static final Logger log = LoggerFactory.getLogger(CrowdControl.class);
 	protected final Map<String, Supplier<CCEffect>> effects = new HashMap<>();
 	protected final Map<UUID, ConnectedPlayer> players = new HashMap<>();
+	protected final Set<UUID> pendingRequests = new HashSet<>();
 	protected final ExecutorService effectPool = Executors.newCachedThreadPool();
 	protected final ScheduledExecutorService timedEffectPool = Executors.newScheduledThreadPool(20);
 	protected final ExecutorService eventPool = Executors.newCachedThreadPool();
@@ -87,6 +86,10 @@ public class CrowdControl {
 			return existing;
 		}
 		ConnectedPlayer player = new ConnectedPlayer(playerId, this);
+		player.getEventManager().registerEventConsumer(CCEventType.EFFECT_RESPONSE, response -> {
+			if (!response.getStatus().isTerminating()) return;
+			pendingRequests.remove(response.getRequestId());
+		});
 		player.connect();
 		players.put(playerId, player);
 		return player;
@@ -132,6 +135,7 @@ public class CrowdControl {
 	}
 
 	public void executeEffect(@NotNull PublicEffectPayload payload, @NotNull ConnectedPlayer source) {
+		pendingRequests.add(payload.getRequestId());
 		String effectID = payload.getEffect().getEffectId();
 		Supplier<CCEffect> supplier = effects.get(effectID);
 		if (supplier == null) {
@@ -145,7 +149,6 @@ public class CrowdControl {
 		}
 
 		// TODO: TIMEd EFECTS
-		// TODO: game could return null and then not emit an event
 
 		CompletableFuture<CCEffectResponse> future = CompletableFuture.supplyAsync(() -> {
 			try {
@@ -161,16 +164,24 @@ public class CrowdControl {
 			}
 		}, effectPool);
 
-		ScheduledFuture<?> timeout = timedEffectPool.schedule(() -> future.cancel(true), QUEUE_DURATION, TimeUnit.SECONDS);
+		ScheduledFuture<?> timeout = timedEffectPool.schedule(() -> {
+			future.cancel(true);
+			if (!pendingRequests.remove(payload.getRequestId())) return; // double check
+			source.sendResponse(new CCInstantEffectResponse(
+				payload.getRequestId(),
+				ResponseStatus.FAIL_TEMPORARY,
+				"Timed out"
+			));
+		}, QUEUE_DURATION, TimeUnit.SECONDS);
 
 		future.handleAsync((result, e) -> {
 			if (e != null) {
 				log.error("Failed to await effect {}", effectID, e);
 			}
 			else if (result != null) {
+				if (result.getStatus().isTerminating()) timeout.cancel(false); // cancel redundant task
 				source.sendResponse(result);
 			}
-			timeout.cancel(false);
 			return null;
 		}, effectPool);
 	}
