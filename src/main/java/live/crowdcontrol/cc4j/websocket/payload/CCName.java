@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -81,6 +82,7 @@ public class CCName implements Comparable<CCName> {
 		return computeSortValue().compareTo(o.computeSortValue());
 	}
 
+	@ApiStatus.Internal
 	public static class CCNameAdapter extends StdDeserializer<CCName> {
 		public CCNameAdapter() {
 			super(CCName.class);

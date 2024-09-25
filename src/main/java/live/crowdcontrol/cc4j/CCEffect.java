@@ -23,12 +23,11 @@ public interface CCEffect {
 //	@Pattern(EFFECT_ID_PATTERN)
 //	String effectID();
 
-	// TODO: reference const in javadoc
 	/**
 	 * Triggers this effect.
 	 * <p>
 	 * May return null if you'd prefer to send a response {@link CCPlayer#sendResponse(CCEffectResponse) manually},
-	 * but please note that if you fail to emit a terminating response within 60 seconds
+	 * but please note that if you fail to emit a terminating response within {@value CrowdControl#QUEUE_DURATION} seconds
 	 * then a failure response will be produced for you.
 	 *
 	 * @param request the request responsible for invoking this effect

@@ -10,7 +10,7 @@ import java.util.UUID;
  * Informs the server of whether a purchased timed effect was executed successfully or not.
  */
 public class CCTimedEffectResponse extends CCEffectResponse {
-	protected int timeRemaining;
+	protected long timeRemaining;
 
 	@JsonCreator
 	CCTimedEffectResponse(@JsonProperty("id") @NotNull UUID id,
@@ -18,7 +18,7 @@ public class CCTimedEffectResponse extends CCEffectResponse {
 						  @JsonProperty("request") @NotNull UUID request,
 						  @JsonProperty("message") @NotNull String message,
 						  @JsonProperty("status") @NotNull ResponseStatus status,
-						  int timeRemaining) {
+						  long timeRemaining) {
 		super(id, stamp, request, message, status);
 		this.timeRemaining = timeRemaining;
 	}
@@ -34,12 +34,21 @@ public class CCTimedEffectResponse extends CCEffectResponse {
 	public CCTimedEffectResponse(@NotNull UUID requestID,
 								 @NotNull ResponseStatus status,
 								 @NotNull String message,
-								 int timeRemaining) {
+								 long timeRemaining) {
 		super(requestID, status, message);
 		this.timeRemaining = timeRemaining;
 
 		if (!status.isTimed()) {
 			throw new IllegalArgumentException("Expected a timed status, received instant status " + status);
 		}
+	}
+
+	/**
+	 * Gets the time remaining on the effect in milliseconds.
+	 *
+	 * @return milliseconds
+	 */
+	public long getTimeRemaining() {
+		return timeRemaining;
 	}
 }

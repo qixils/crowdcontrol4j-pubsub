@@ -3,6 +3,7 @@ package live.crowdcontrol.cc4j;
 import live.crowdcontrol.cc4j.websocket.ConnectedPlayer;
 import live.crowdcontrol.cc4j.websocket.data.CCEffectResponse;
 import live.crowdcontrol.cc4j.websocket.data.CCInstantEffectResponse;
+import live.crowdcontrol.cc4j.websocket.data.CCTimedEffectResponse;
 import live.crowdcontrol.cc4j.websocket.data.ResponseStatus;
 import live.crowdcontrol.cc4j.websocket.payload.PublicEffectPayload;
 import org.jetbrains.annotations.NotNull;
@@ -11,9 +12,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 import static live.crowdcontrol.cc4j.CCEffect.EFFECT_ID_PATTERN;
@@ -26,12 +29,12 @@ public class CrowdControl {
 	private static final Logger log = LoggerFactory.getLogger(CrowdControl.class);
 	protected final Map<String, Supplier<CCEffect>> effects = new HashMap<>();
 	protected final Map<UUID, ConnectedPlayer> players = new HashMap<>();
-	protected final Set<UUID> pendingRequests = new HashSet<>();
+	final Map<UUID, ActiveEffect> pendingRequests = new HashMap<>();
+	final Map<UUID, ActiveEffect> timedRequests = new HashMap<>();
 	protected final ExecutorService effectPool = Executors.newCachedThreadPool();
 	protected final ScheduledExecutorService timedEffectPool = Executors.newScheduledThreadPool(20);
 	protected final ExecutorService eventPool = Executors.newCachedThreadPool();
 	protected final Path dataFolder;
-	protected AtomicInteger runningEffects;
 
 	public CrowdControl(@NotNull Path dataFolder) {
 		this.dataFolder = dataFolder;
@@ -86,10 +89,7 @@ public class CrowdControl {
 			return existing;
 		}
 		ConnectedPlayer player = new ConnectedPlayer(playerId, this);
-		player.getEventManager().registerEventConsumer(CCEventType.EFFECT_RESPONSE, response -> {
-			if (!response.getStatus().isTerminating()) return;
-			pendingRequests.remove(response.getRequestId());
-		});
+		player.getEventManager().registerEventConsumer(CCEventType.EFFECT_RESPONSE, response -> handleEffectResponse(response, player));
 		player.connect();
 		players.put(playerId, player);
 		return player;
@@ -135,7 +135,6 @@ public class CrowdControl {
 	}
 
 	public void executeEffect(@NotNull PublicEffectPayload payload, @NotNull ConnectedPlayer source) {
-		pendingRequests.add(payload.getRequestId());
 		String effectID = payload.getEffect().getEffectId();
 		Supplier<CCEffect> supplier = effects.get(effectID);
 		if (supplier == null) {
@@ -148,41 +147,132 @@ public class CrowdControl {
 			return;
 		}
 
-		// TODO: TIMEd EFECTS
+		CCEffect ccEffect;
+		try {
+			ccEffect = supplier.get();
+		} catch (Exception e) {
+			log.error("Failed to obtain effect {}", effectID, e);
+			source.sendResponse(new CCInstantEffectResponse(
+				payload.getRequestId(),
+				ResponseStatus.FAIL_TEMPORARY,
+				"Effect experienced an unknown error"
+			));
+			return;
+		}
 
-		CompletableFuture<CCEffectResponse> future = CompletableFuture.supplyAsync(() -> {
+		ActiveEffect effect = new ActiveEffect(this, ccEffect, payload, source);
+		pendingRequests.put(payload.getRequestId(), effect);
+
+		CompletableFuture<CCEffectResponse> responseFuture = new CompletableFuture<>();
+		effect.setResponseFuture(responseFuture);
+
+		Future<?> responseThread = effectPool.submit(() -> {
 			try {
-				return supplier.get().onTrigger(payload, source);
+				responseFuture.complete(ccEffect.onTrigger(payload, source));
 			} catch (Exception e) {
+				if (Thread.interrupted()) {
+					log.warn("Effect {} cancelled", effectID);
+					responseFuture.complete(null);
+					// assume interrupter is sending a response
+					return;
+				}
 				log.error("Failed to invoke effect {}", effectID, e);
 				source.sendResponse(new CCInstantEffectResponse(
 					payload.getRequestId(),
 					ResponseStatus.FAIL_TEMPORARY,
 					"Effect experienced an unknown error"
 				));
-				return null;
+				responseFuture.completeExceptionally(e);
 			}
-		}, effectPool);
+		});
+		effect.setResponseThread(responseThread);
 
-		ScheduledFuture<?> timeout = timedEffectPool.schedule(() -> {
-			future.cancel(true);
-			if (!pendingRequests.remove(payload.getRequestId())) return; // double check
-			source.sendResponse(new CCInstantEffectResponse(
-				payload.getRequestId(),
-				ResponseStatus.FAIL_TEMPORARY,
-				"Timed out"
-			));
-		}, QUEUE_DURATION, TimeUnit.SECONDS);
+		ScheduledFuture<?> responseTimeout = timedEffectPool.schedule(
+			() -> cancel(effect, "Timed out"),
+			QUEUE_DURATION,
+			TimeUnit.SECONDS
+		);
+		effect.setResponseTimeout(responseTimeout);
 
-		future.handleAsync((result, e) -> {
-			if (e != null) {
+		responseFuture.handleAsync((result, e) -> {
+			if (e != null)
 				log.error("Failed to await effect {}", effectID, e);
-			}
-			else if (result != null) {
-				if (result.getStatus().isTerminating()) timeout.cancel(false); // cancel redundant task
+			else if (result != null)
 				source.sendResponse(result);
-			}
 			return null;
 		}, effectPool);
+	}
+
+	protected void handleEffectResponse(@NotNull CCEffectResponse response, @NotNull ConnectedPlayer source) {
+		if (response.getStatus() == ResponseStatus.TIMED_END) {
+			timedRequests.remove(response.getRequestId());
+			return;
+		}
+
+		if (!response.getStatus().isTerminating()) return;
+
+		ActiveEffect effect = pendingRequests.remove(response.getRequestId());
+		if (effect == null) return; // this is a further response
+
+		// Kill timeout task
+		ScheduledFuture<?> responseTimeout = effect.getResponseTimeout();
+		if (responseTimeout != null) responseTimeout.cancel(false);
+
+		if (response.getStatus() != ResponseStatus.TIMED_BEGIN) return;
+		if (!(response instanceof CCTimedEffectResponse)) return;
+		CCTimedEffectResponse timedResponse = (CCTimedEffectResponse) response;
+
+		// Start timed effect!
+		timedRequests.put(response.getRequestId(), effect);
+		effect.scheduleCompleter(timedResponse.getTimeRemaining());
+	}
+
+	private void cancel(ActiveEffect effect, String message) {
+		pendingRequests.remove(effect.getPayload().getRequestId());
+
+		effect.getPlayer().sendResponse(new CCInstantEffectResponse(
+			effect.getPayload().getRequestId(),
+			ResponseStatus.FAIL_TEMPORARY,
+			message
+		));
+
+		CompletableFuture<CCEffectResponse> responseFuture = effect.getResponseFuture();
+		if (responseFuture != null) responseFuture.complete(null);
+
+		Future<?> responseThread = effect.getResponseThread();
+		if (responseThread != null) responseThread.cancel(true);
+
+		ScheduledFuture<?> responseTimeout = effect.getResponseTimeout();
+		if (responseTimeout != null) responseTimeout.cancel(false);
+	}
+
+	public void pauseByRequestId(@NotNull UUID requestId) {
+		ActiveEffect effect = pendingRequests.remove(requestId);
+		if (effect != null) {
+			cancel(effect, "Effect paused before execution");
+			return;
+		}
+
+		effect = timedRequests.get(requestId);
+		if (effect == null) return;
+
+		effect.pause();
+	}
+
+	public void pauseAll() {
+		// arraylist protects against CME
+		new ArrayList<>(pendingRequests.values()).forEach(effect -> cancel(effect, "All pending effects were requested to be stopped"));
+		timedRequests.values().forEach(ActiveEffect::pause);
+	}
+
+	public void resumeByRequestId(@NotNull UUID requestId) {
+		ActiveEffect effect = timedRequests.get(requestId);
+		if (effect == null) return;
+
+		effect.resume();
+	}
+
+	public void resumeAll() {
+		timedRequests.values().forEach(ActiveEffect::resume);
 	}
 }

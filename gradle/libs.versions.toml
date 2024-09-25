@@ -4,7 +4,6 @@
 [versions]
 junit-jupiter = "5.10.2"
 websocket = "1.5.7"
-gson = "2.11.0"
 jackson = "2.17.2"
 annotations = "24.0.0"
 jwt = "4.4.0"
@@ -13,7 +12,6 @@ geantyref = "2.0.0"
 [libraries]
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
 websocket = { module = "org.java-websocket:Java-WebSocket", version.ref = "websocket" }
-gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 jackson-core = { module = "com.fasterxml.jackson.core:jackson-core", version.ref="jackson" }
 jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref="jackson" }
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref="jackson" }
