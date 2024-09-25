@@ -82,7 +82,7 @@ public interface CCPlayer {
 	 * @return future to complete when finished
 	 */
 	@NotNull
-	CompletableFuture<?> startSession();
+	CompletableFuture<?> startSession(@NotNull CCEffectReport @NotNull ... reports);
 
 	/**
 	 * Attempts to stop the streamer's session.

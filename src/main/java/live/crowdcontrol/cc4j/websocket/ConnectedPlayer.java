@@ -233,10 +233,11 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 	}
 
 	@Override
-	public @NotNull CompletableFuture<?> startSession() {
+	public @NotNull CompletableFuture<?> startSession(@NotNull CCEffectReport @NotNull ... reports) {
 		if (this.gameSessionID != null) return CompletableFuture.completedFuture(null);
 		return post("/game-session/start", new GameSessionStartData(
-			parent.getGamePackId()
+			parent.getGamePackId(),
+			Arrays.asList(reports)
 		)).handle((payloadString, e) -> {
 			if (e != null) {
 				log.warn("Failed to query URL", e);

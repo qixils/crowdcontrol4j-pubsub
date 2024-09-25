@@ -9,17 +9,20 @@ public interface CCTimedEffect extends CCEffect {
 	 * Called when an effect is paused.
 	 * No response is expected of you.
 	 */
-	void onPause(@NotNull PublicEffectPayload request, @NotNull CCPlayer source);
+	default void onPause(@NotNull PublicEffectPayload request, @NotNull CCPlayer source) {
+	}
 
 	/**
 	 * Called when an effect is resumed.
 	 * No response is expected of you.
 	 */
-	void onResume(@NotNull PublicEffectPayload request, @NotNull CCPlayer source);
+	default void onResume(@NotNull PublicEffectPayload request, @NotNull CCPlayer source) {
+	}
 
 	/**
 	 * Called when an effect ends.
 	 * No response is expected of you.
 	 */
-	void onEnd(@NotNull PublicEffectPayload request, @NotNull CCPlayer source);
+	default void onEnd(@NotNull PublicEffectPayload request, @NotNull CCPlayer source) {
+	}
 }

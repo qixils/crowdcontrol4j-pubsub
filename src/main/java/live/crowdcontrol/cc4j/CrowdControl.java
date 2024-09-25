@@ -12,15 +12,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import static live.crowdcontrol.cc4j.CCEffect.EFFECT_ID_PATTERN;
 
+// todo javadocs
 public class CrowdControl {
 	/**
 	 * Amount of time in seconds that effects are allowed to execute for.
@@ -88,11 +87,23 @@ public class CrowdControl {
 		return eventPool;
 	}
 
+	/**
+	 * Gets a registered player by the provided unique ID.
+	 *
+	 * @param playerId unique player id
+	 * @return registered player or null
+	 */
 	@Nullable
 	public CCPlayer getPlayer(@NotNull UUID playerId) {
 		return players.get(playerId);
 	}
 
+	/**
+	 * Registers a player by the provided unique ID.
+	 *
+	 * @param playerId unique player id
+	 * @return crowd control player
+	 */
 	@NotNull
 	public CCPlayer addPlayer(@NotNull UUID playerId) {
 		CCPlayer existing = getPlayer(playerId);
@@ -107,6 +118,12 @@ public class CrowdControl {
 		return player;
 	}
 
+	/**
+	 * Removes a registered player by the provided unique ID.
+	 *
+	 * @param playerId unique player id
+	 * @return whether a player was removed
+	 */
 	public boolean removePlayer(@NotNull UUID playerId) {
 		ConnectedPlayer existing = players.remove(playerId);
 		if (existing == null) return false;
@@ -114,6 +131,32 @@ public class CrowdControl {
 			existing.close();
 		return true;
 	}
+
+	/**
+	 * Gets all the currently registered players.
+	 * The returned collection is not a view; changes to it will not be reflected.
+	 *
+	 * @return players
+	 */
+	@NotNull
+	public List<CCPlayer> getPlayers() {
+		return new ArrayList<>(players.values());
+	}
+
+	/**
+	 * Gets the list of players logged in as the specified user ID.
+	 *
+	 * @param ccUID Crowd Control user IDs
+	 * @return game player ids
+	 */
+	@Nullable
+	public Set<UUID> getPlayerIds(@NotNull String ccUID) {
+		return getPlayers().stream()
+			.filter(player -> player.getUserToken() != null && player.getUserToken().getId().equalsIgnoreCase(ccUID))
+			.map(CCPlayer::getUuid)
+			.collect(Collectors.toSet());
+	}
+
 
 	/**
 	 * Registers an effect which maintains one object across its lifetime.
@@ -146,6 +189,12 @@ public class CrowdControl {
 		return true;
 	}
 
+	/**
+	 * Executes the provided effect.
+	 *
+	 * @param payload info about the effect
+	 * @param source player who spawned the effect
+	 */
 	public void executeEffect(@NotNull PublicEffectPayload payload, @NotNull ConnectedPlayer source) {
 		String effectID = payload.getEffect().getEffectId();
 		Supplier<CCEffect> supplier = effects.get(effectID);
@@ -258,6 +307,11 @@ public class CrowdControl {
 		if (responseTimeout != null) responseTimeout.cancel(false);
 	}
 
+	/**
+	 * Pauses a request given its ID.
+	 *
+	 * @param requestId request id
+	 */
 	public void pauseByRequestId(@NotNull UUID requestId) {
 		ActiveEffect effect = pendingRequests.remove(requestId);
 		if (effect != null) {
@@ -271,12 +325,20 @@ public class CrowdControl {
 		effect.pause();
 	}
 
+	/**
+	 * Pauses all requests, and cancels all pending requests.
+	 */
 	public void pauseAll() {
 		// arraylist protects against CME
 		new ArrayList<>(pendingRequests.values()).forEach(effect -> cancel(effect, "All pending effects were requested to be stopped"));
 		timedRequests.values().forEach(ActiveEffect::pause);
 	}
 
+	/**
+	 * Resumes a request given its ID.
+	 *
+	 * @param requestId request id
+	 */
 	public void resumeByRequestId(@NotNull UUID requestId) {
 		ActiveEffect effect = timedRequests.get(requestId);
 		if (effect == null) return;
@@ -284,7 +346,22 @@ public class CrowdControl {
 		effect.resume();
 	}
 
+	/**
+	 * Resumes all requests.
+	 */
 	public void resumeAll() {
 		timedRequests.values().forEach(ActiveEffect::resume);
+	}
+
+	/**
+	 * Returns whether a request by the given timed effect ID is active.
+	 * Paused effects are considered active.
+	 *
+	 * @param effectId effect id
+	 * @param playerId player id
+	 * @return is effect active
+	 */
+	public boolean isPlayerEffectActive(@NotNull String effectId, @NotNull UUID playerId) {
+		return timedRequests.values().stream().anyMatch(effect -> effect.getPlayer().getUuid().equals(playerId) && effect.getPayload().getEffect().getEffectId().equals(effectId));
 	}
 }

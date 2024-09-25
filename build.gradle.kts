@@ -55,6 +55,7 @@ publishing {
                 name = "crowdcontrol4j pubsub"
                 description = "An implementation of the Crowd Control PubSub WebSocket protocol for Java 8+"
                 url = "http://github.com/qixils/crowdcontrol4j-pubsub"
+                /*
                 licenses {
                     license {
                         name = "The Apache License, Version 2.0"
@@ -73,6 +74,7 @@ publishing {
                     developerConnection = "scm:git:ssh://example.com/my-library.git"
                     url = "http://example.com/my-library/"
                 }
+                */
             }
         }
     }
