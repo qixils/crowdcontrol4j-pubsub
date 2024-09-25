@@ -8,6 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 public interface CCPlayer {
 
@@ -26,7 +27,7 @@ public interface CCPlayer {
 	 * @return connection ID
 	 */
 	@Nullable
-	String getConnectionID();
+	String getConnectionId();
 
 	/**
 	 * Gets the user's token used for making authenticated requests.
@@ -43,6 +44,14 @@ public interface CCPlayer {
 	 */
 	@Nullable
 	UserToken getUserToken();
+
+	/**
+	 * Gets the ID of the player's active game session.
+	 *
+	 * @return gameSessionID or null
+	 */
+	@Nullable
+	String getGameSessionId();
 
 	/**
 	 * Gets the manager which handles distributing events.
@@ -65,4 +74,21 @@ public interface CCPlayer {
 	 * @return whether the report could be sent
 	 */
 	boolean sendReport(@NotNull CCEffectReport @NotNull ... reports);
+
+	/**
+	 * Attempts to start the streamer's session.
+	 * May fail if they have not yet authenticated; check {@link #getGameSessionId()} for outcome.
+	 *
+	 * @return future to complete when finished
+	 */
+	@NotNull
+	CompletableFuture<?> startSession();
+
+	/**
+	 * Attempts to stop the streamer's session.
+	 *
+	 * @return future to complete when finished
+	 */
+	@NotNull
+	CompletableFuture<?> stopSession();
 }

@@ -26,18 +26,29 @@ public class CrowdControl {
 	 * Amount of time in seconds that effects are allowed to execute for.
 	 */
 	public static final int QUEUE_DURATION = 60;
-	private static final Logger log = LoggerFactory.getLogger(CrowdControl.class);
-	protected final Map<String, Supplier<CCEffect>> effects = new HashMap<>();
-	protected final Map<UUID, ConnectedPlayer> players = new HashMap<>();
-	final Map<UUID, ActiveEffect> pendingRequests = new HashMap<>();
-	final Map<UUID, ActiveEffect> timedRequests = new HashMap<>();
-	protected final ExecutorService effectPool = Executors.newCachedThreadPool();
-	protected final ScheduledExecutorService timedEffectPool = Executors.newScheduledThreadPool(20);
-	protected final ExecutorService eventPool = Executors.newCachedThreadPool();
-	protected final Path dataFolder;
+	private static final @NotNull Logger log = LoggerFactory.getLogger(CrowdControl.class);
+	protected final @NotNull Map<String, Supplier<CCEffect>> effects = new HashMap<>();
+	protected final @NotNull Map<UUID, ConnectedPlayer> players = new HashMap<>();
+	final @NotNull Map<UUID, ActiveEffect> pendingRequests = new HashMap<>();
+	final @NotNull Map<UUID, ActiveEffect> timedRequests = new HashMap<>();
+	protected final @NotNull ExecutorService effectPool = Executors.newCachedThreadPool();
+	protected final @NotNull ScheduledExecutorService timedEffectPool = Executors.newScheduledThreadPool(20);
+	protected final @NotNull ExecutorService eventPool = Executors.newCachedThreadPool();
+	protected final @NotNull String gamePackId;
+	protected final @NotNull Path dataFolder;
 
-	public CrowdControl(@NotNull Path dataFolder) {
+	public CrowdControl(@NotNull String gamePackId, @NotNull Path dataFolder) {
+		this.gamePackId = gamePackId;
 		this.dataFolder = dataFolder;
+	}
+
+	/**
+	 * Gets the ID of this game's Crowd Control pack.
+	 *
+	 * @return gamePackID
+	 */
+	public @NotNull String getGamePackId() {
+		return gamePackId;
 	}
 
 	/**
@@ -45,6 +56,7 @@ public class CrowdControl {
 	 *
 	 * @return data folder
 	 */
+	@NotNull
 	public Path getDataFolder() {
 		return dataFolder;
 	}

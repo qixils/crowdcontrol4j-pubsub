@@ -3,6 +3,8 @@ package live.crowdcontrol.cc4j;
 import io.leangen.geantyref.TypeToken;
 import live.crowdcontrol.cc4j.util.CloseData;
 import live.crowdcontrol.cc4j.websocket.data.CCEffectResponse;
+import live.crowdcontrol.cc4j.websocket.http.GameSessionStartPayload;
+import live.crowdcontrol.cc4j.websocket.http.GameSessionStop;
 import live.crowdcontrol.cc4j.websocket.payload.PublicEffectPayload;
 import live.crowdcontrol.cc4j.websocket.payload.SubscriptionResultPayload;
 import live.crowdcontrol.cc4j.websocket.payload.WhoAmIPayload;
@@ -113,4 +115,14 @@ public class CCEventType<T> {
 	 * Called when {@link CCPlayer#sendResponse(CCEffectResponse)} has been called.
 	 */
 	public static final CCEventType<CCEffectResponse> EFFECT_RESPONSE = new CCEventType<>("effect_result", CCEffectResponse.class);
+
+	/**
+	 * Called when a session has started.
+	 */
+	public static final CCEventType<GameSessionStartPayload> SESSION_STARTED = new CCEventType<>("game_session_start", GameSessionStartPayload.class);
+
+	/**
+	 * Called when a session has stopped.
+	 */
+	public static final CCEventType<GameSessionStop> SESSION_STOPPED = new CCEventType<>("game_session_stop", GameSessionStop.class);
 }
