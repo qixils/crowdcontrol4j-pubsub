@@ -13,7 +13,8 @@ import live.crowdcontrol.cc4j.util.EventManager;
 import live.crowdcontrol.cc4j.websocket.data.*;
 import live.crowdcontrol.cc4j.websocket.http.GameSessionStartData;
 import live.crowdcontrol.cc4j.websocket.http.GameSessionStartPayload;
-import live.crowdcontrol.cc4j.websocket.http.GameSessionStop;
+import live.crowdcontrol.cc4j.websocket.http.GameSessionStopData;
+import live.crowdcontrol.cc4j.websocket.http.GameSessionStopPayload;
 import live.crowdcontrol.cc4j.websocket.payload.*;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
@@ -24,12 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URI;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -43,9 +39,8 @@ import java.util.concurrent.CompletableFuture;
  */
 @ApiStatus.Internal
 public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
-	protected static final @NotNull ObjectMapper JACKSON;
+	public static final @NotNull ObjectMapper JACKSON;
 	protected static final @NotNull Logger log = LoggerFactory.getLogger(ConnectedPlayer.class);
-	protected static final @NotNull URL OPEN_API_URL;
 	protected final @NotNull Set<String> subscriptions = new HashSet<>();
 	protected final @NotNull EventManager eventManager;
 	protected final @NotNull UUID uuid;
@@ -58,12 +53,6 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 	protected boolean privateAvailable;
 
 	static {
-		try {
-			OPEN_API_URL = new URL("https://openapi.crowdcontrol.live/");
-		} catch (MalformedURLException e) {
-			throw new RuntimeException("Failed to create OpenAPI URL", e);
-		}
-
 		ObjectMapper mapper = new ObjectMapper();
 		mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 		SimpleModule module = new SimpleModule("CrowdControlSerializers");
@@ -86,7 +75,7 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 		this.eventManager.registerEventConsumer(CCEventType.DISCONNECTED, data -> {
 			this.connectionID = null;
 			if (this.parent.getPlayer(uuid) != this) return;
-			connect(); // reconnect!
+			reconnect(); // reconnect!
 		});
 		this.eventManager.registerEventConsumer(CCEventType.IDENTIFIED, payload -> this.connectionID = payload.getConnectionId());
 		this.eventManager.registerEventRunnable(CCEventType.AUTHENTICATED, this::subscribe);
@@ -132,8 +121,9 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 					eventManager.dispatch(CCEventType.SESSION_STARTED, JACKSON.treeToValue(event.payload, GameSessionStartPayload.class));
 					break;
 				case "game-session-stop":
-					eventManager.dispatch(CCEventType.SESSION_STOPPED, JACKSON.treeToValue(event.payload, GameSessionStop.class));
+					eventManager.dispatch(CCEventType.SESSION_STOPPED, JACKSON.treeToValue(event.payload, GameSessionStopPayload.class));
 					break;
+				// TODO: catch refund and cancel effect
 				default:
 					log.debug("Ignoring unknown event {} on domain {}", event.type, event.domain);
 			}
@@ -194,64 +184,20 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 		));
 	}
 
-	private @NotNull CompletableFuture<String> post(@NotNull String spec, @Nullable Object output) {
-		if (this.token == null) return CompletableFuture.completedFuture(null);
-
-		return CompletableFuture.supplyAsync(() -> {
-			HttpURLConnection con = null;
-			try {
-				URL url = new URL(OPEN_API_URL, spec);
-				con = (HttpURLConnection) url.openConnection();
-				con.setRequestMethod("POST");
-				con.setRequestProperty("Accept", "application/json");
-				con.setRequestProperty("Authorization", "cc-auth-token " + this.token);
-				con.setConnectTimeout(5000);
-				con.setReadTimeout(5000);
-				if (output != null) {
-					con.setRequestProperty("Content-Type", "application/json");
-					con.setDoOutput(true);
-					try (OutputStream os = con.getOutputStream()) {
-						JACKSON.writeValue(os, output);
-					}
-				}
-				try (BufferedReader br = new BufferedReader(new InputStreamReader(con.getInputStream(), StandardCharsets.UTF_8))) {
-					StringBuilder response = new StringBuilder();
-					String responseLine;
-					while ((responseLine = br.readLine()) != null) {
-						response.append(responseLine.trim());
-					}
-					if (con.getResponseCode() != 200)
-						throw new IllegalStateException("Server returned code " + con.getResponseCode()); // TODO: this is jank !
-					return response.toString();
-				}
-			} catch (Exception e) {
-				throw new RuntimeException(e);
-			} finally {
-				if (con != null) con.disconnect();
-			}
-		}, parent.getEffectPool());
-	}
-
 	@Override
 	public @NotNull CompletableFuture<?> startSession(@NotNull CCEffectReport @NotNull ... reports) {
 		if (this.gameSessionID != null) return CompletableFuture.completedFuture(null);
-		return post("/game-session/start", new GameSessionStartData(
+		if (this.token == null) return CompletableFuture.completedFuture(null);
+		return parent.getHttpUtil().apiPost("/game-session/start", GameSessionStartPayload.class, this.token, new GameSessionStartData(
 			parent.getGamePackId(),
 			Arrays.asList(reports)
-		)).handle((payloadString, e) -> {
+		)).handle((payload, e) -> {
 			if (e != null) {
 				log.warn("Failed to query URL", e);
 				return null;
 			}
-			if (payloadString == null || payloadString.isEmpty()) {
-				log.warn("Got bad payload `{}`", payloadString);
-				return null;
-			}
-			GameSessionStartPayload payload;
-			try {
-				payload = JACKSON.readValue(payloadString, GameSessionStartPayload.class);
-			} catch (JsonProcessingException ex) {
-				log.warn("Failed to decode payload `{}`", payloadString);
+			if (payload == null) {
+				log.warn("Got bad payload");
 				return null;
 			}
 			this.gameSessionID = payload.getGameSessionId();
@@ -262,7 +208,8 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 	@Override
 	public @NotNull CompletableFuture<?> stopSession() {
 		if (this.gameSessionID == null) return CompletableFuture.completedFuture(null);
-		return post("/game-session/stop", null).handle((payloadString, e) -> {
+		if (this.token == null) return CompletableFuture.completedFuture(null);
+		return parent.getHttpUtil().apiPost("/game-session/stop", this.token, new GameSessionStopData(this.gameSessionID)).handle((payload, e) -> {
 			if (e != null) {
 				log.warn("Failed to query URL", e);
 				return null;

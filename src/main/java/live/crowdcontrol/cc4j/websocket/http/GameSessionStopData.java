@@ -2,13 +2,13 @@ package live.crowdcontrol.cc4j.websocket.http;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
- * Data sent to or returned by the server when trying to stop a session.
+ * Data sent to the server when trying to stop a session.
  */
-public class GameSessionStop {
-	private final @NotNull String gameSessionID;
+public class GameSessionStopData {
+	private final @Nullable String gameSessionID;
 
 	/**
 	 * Creates data.
@@ -16,7 +16,7 @@ public class GameSessionStop {
 	 * @param gameSessionID ID of the game session
 	 */
 	@JsonCreator
-	public GameSessionStop(@JsonProperty("gameSessionID") @NotNull String gameSessionID) {
+	public GameSessionStopData(@JsonProperty("gameSessionID") @Nullable String gameSessionID) {
 		this.gameSessionID = gameSessionID;
 	}
 
@@ -25,7 +25,7 @@ public class GameSessionStop {
 	 *
 	 * @return gameSessionID
 	 */
-	public @NotNull String getGameSessionId() {
+	public @Nullable String getGameSessionId() {
 		return gameSessionID;
 	}
 }

@@ -4,7 +4,7 @@ import io.leangen.geantyref.TypeToken;
 import live.crowdcontrol.cc4j.util.CloseData;
 import live.crowdcontrol.cc4j.websocket.data.CCEffectResponse;
 import live.crowdcontrol.cc4j.websocket.http.GameSessionStartPayload;
-import live.crowdcontrol.cc4j.websocket.http.GameSessionStop;
+import live.crowdcontrol.cc4j.websocket.http.GameSessionStopPayload;
 import live.crowdcontrol.cc4j.websocket.payload.PublicEffectPayload;
 import live.crowdcontrol.cc4j.websocket.payload.SubscriptionResultPayload;
 import live.crowdcontrol.cc4j.websocket.payload.WhoAmIPayload;
@@ -124,5 +124,5 @@ public class CCEventType<T> {
 	/**
 	 * Called when a session has stopped.
 	 */
-	public static final CCEventType<GameSessionStop> SESSION_STOPPED = new CCEventType<>("game_session_stop", GameSessionStop.class);
+	public static final CCEventType<GameSessionStopPayload> SESSION_STOPPED = new CCEventType<>("game_session_stop", GameSessionStopPayload.class);
 }

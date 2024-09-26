@@ -1,10 +1,13 @@
 package live.crowdcontrol.cc4j;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import live.crowdcontrol.cc4j.util.HttpUtil;
 import live.crowdcontrol.cc4j.websocket.ConnectedPlayer;
 import live.crowdcontrol.cc4j.websocket.data.CCEffectResponse;
 import live.crowdcontrol.cc4j.websocket.data.CCInstantEffectResponse;
 import live.crowdcontrol.cc4j.websocket.data.CCTimedEffectResponse;
 import live.crowdcontrol.cc4j.websocket.data.ResponseStatus;
+import live.crowdcontrol.cc4j.websocket.http.GamePack;
 import live.crowdcontrol.cc4j.websocket.payload.PublicEffectPayload;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -33,12 +36,28 @@ public class CrowdControl {
 	protected final @NotNull ExecutorService effectPool = Executors.newCachedThreadPool();
 	protected final @NotNull ScheduledExecutorService timedEffectPool = Executors.newScheduledThreadPool(20);
 	protected final @NotNull ExecutorService eventPool = Executors.newCachedThreadPool();
+	protected final @NotNull HttpUtil httpUtil = new HttpUtil(this);
+	protected final @NotNull String gameId;
 	protected final @NotNull String gamePackId;
 	protected final @NotNull Path dataFolder;
+	protected @Nullable GamePack gamePack;
 
-	public CrowdControl(@NotNull String gamePackId, @NotNull Path dataFolder) {
+	public CrowdControl(@NotNull String gameId,
+						@NotNull String gamePackId,
+						@NotNull Path dataFolder) {
+		this.gameId = gameId;
 		this.gamePackId = gamePackId;
 		this.dataFolder = dataFolder;
+		loadGamePack();
+	}
+
+	/**
+	 * Gets the ID of this game's Crowd Control metadata.
+	 *
+	 * @return gameID
+	 */
+	public @NotNull String getGameId() {
+		return gameId;
 	}
 
 	/**
@@ -88,6 +107,40 @@ public class CrowdControl {
 	}
 
 	/**
+	 * Gets the utility for making requests to Crowd Control's HTTP servers.
+	 *
+	 * @return http util
+	 */
+	public @NotNull HttpUtil getHttpUtil() {
+		return httpUtil;
+	}
+
+	/**
+	 * Gets the data about this game pack.
+	 * May be missing if the game IDs are invalid, or it hasn't finished loading yet.
+	 *
+	 * @return game pack
+	 */
+	public @Nullable GamePack getGamePack() {
+		return gamePack;
+	}
+
+	/**
+	 * Re-fetches the {@link #getGamePack() game pack}.
+	 */
+	public void loadGamePack() {
+		httpUtil.apiGet(String.format("/games/%s/packs", gameId), new TypeReference<List<GamePack>>() {
+		}, null).thenAcceptAsync(gamePacks -> {
+			if (gamePacks == null) return;
+			for (GamePack gamePack : gamePacks) {
+				if (!gamePack.getGamePackId().equalsIgnoreCase(gamePackId)) continue;
+				this.gamePack = gamePack;
+				return;
+			}
+		}, effectPool);
+	}
+
+	/**
 	 * Gets a registered player by the provided unique ID.
 	 *
 	 * @param playerId unique player id
@@ -127,8 +180,8 @@ public class CrowdControl {
 	public boolean removePlayer(@NotNull UUID playerId) {
 		ConnectedPlayer existing = players.remove(playerId);
 		if (existing == null) return false;
-		if (!existing.isClosed())
-			existing.close();
+		existing.stopSession();
+		existing.close();
 		return true;
 	}
 
@@ -149,7 +202,7 @@ public class CrowdControl {
 	 * @param ccUID Crowd Control user IDs
 	 * @return game player ids
 	 */
-	@Nullable
+	@NotNull
 	public Set<UUID> getPlayerIds(@NotNull String ccUID) {
 		return getPlayers().stream()
 			.filter(player -> player.getUserToken() != null && player.getUserToken().getId().equalsIgnoreCase(ccUID))
@@ -162,7 +215,7 @@ public class CrowdControl {
 	 * Registers an effect which maintains one object across its lifetime.
 	 *
 	 * @param effectID ID of the effect
-	 * @param effect executor object
+	 * @param effect   executor object
 	 * @return whether the effect was added successfully
 	 */
 	public boolean addEffect(@NotNull String effectID, @NotNull CCEffect effect) {
@@ -193,7 +246,7 @@ public class CrowdControl {
 	 * Executes the provided effect.
 	 *
 	 * @param payload info about the effect
-	 * @param source player who spawned the effect
+	 * @param source  player who spawned the effect
 	 */
 	public void executeEffect(@NotNull PublicEffectPayload payload, @NotNull ConnectedPlayer source) {
 		String effectID = payload.getEffect().getEffectId();
@@ -212,11 +265,11 @@ public class CrowdControl {
 		try {
 			ccEffect = supplier.get();
 		} catch (Exception e) {
-			log.error("Failed to obtain effect {}", effectID, e);
+			log.error("Failed to load effect {}", effectID, e);
 			source.sendResponse(new CCInstantEffectResponse(
 				payload.getRequestId(),
-				ResponseStatus.FAIL_TEMPORARY,
-				"Effect experienced an unknown error"
+				ResponseStatus.FAIL_PERMANENT,
+				"Effect could not be loaded"
 			));
 			return;
 		}
@@ -305,6 +358,24 @@ public class CrowdControl {
 
 		ScheduledFuture<?> responseTimeout = effect.getResponseTimeout();
 		if (responseTimeout != null) responseTimeout.cancel(false);
+	}
+
+	/**
+	 * Cancels a request given its ID.
+	 *
+	 * @param requestId request id
+	 */
+	public void cancelByRequestId(@NotNull UUID requestId) {
+		ActiveEffect effect = pendingRequests.remove(requestId);
+		if (effect != null) {
+			cancel(effect, "Effect paused before execution");
+			return;
+		}
+
+		effect = timedRequests.get(requestId);
+		if (effect == null) return;
+
+		// TODO
 	}
 
 	/**
