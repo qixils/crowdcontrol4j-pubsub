@@ -1,7 +1,6 @@
 package live.crowdcontrol.cc4j;
 
 import live.crowdcontrol.cc4j.websocket.ConnectedPlayer;
-import live.crowdcontrol.cc4j.websocket.data.CCEffectResponse;
 import live.crowdcontrol.cc4j.websocket.data.CCInstantEffectResponse;
 import live.crowdcontrol.cc4j.websocket.data.CCTimedEffectResponse;
 import live.crowdcontrol.cc4j.websocket.data.ResponseStatus;
@@ -29,7 +28,7 @@ final class ActiveEffect {
 	private @Nullable ScheduledFuture<?> completer;
 	private @Nullable Instant startedAt;
 	private long timeRemaining = -1;
-	private @Nullable CompletableFuture<CCEffectResponse> responseFuture;
+	private @Nullable CompletableFuture<Void> responseFuture;
 	private @Nullable Future<?> responseThread;
 	private @Nullable ScheduledFuture<?> responseTimeout;
 
@@ -127,11 +126,11 @@ final class ActiveEffect {
 		}
 	}
 
-	public @Nullable CompletableFuture<CCEffectResponse> getResponseFuture() {
+	public @Nullable CompletableFuture<Void> getResponseFuture() {
 		return responseFuture;
 	}
 
-	public void setResponseFuture(@Nullable CompletableFuture<CCEffectResponse> responseFuture) {
+	public void setResponseFuture(@Nullable CompletableFuture<Void> responseFuture) {
 		this.responseFuture = responseFuture;
 	}
 

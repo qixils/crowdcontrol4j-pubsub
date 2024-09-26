@@ -277,12 +277,13 @@ public class CrowdControl {
 		ActiveEffect effect = new ActiveEffect(this, ccEffect, payload, source);
 		pendingRequests.put(payload.getRequestId(), effect);
 
-		CompletableFuture<CCEffectResponse> responseFuture = new CompletableFuture<>();
+		CompletableFuture<Void> responseFuture = new CompletableFuture<>();
 		effect.setResponseFuture(responseFuture);
 
 		Future<?> responseThread = effectPool.submit(() -> {
 			try {
-				responseFuture.complete(ccEffect.onTrigger(payload, source));
+				ccEffect.onTrigger(payload, source);
+				responseFuture.complete(null);
 			} catch (Exception e) {
 				if (Thread.interrupted()) {
 					log.warn("Effect {} cancelled", effectID);
@@ -311,8 +312,6 @@ public class CrowdControl {
 		responseFuture.handleAsync((result, e) -> {
 			if (e != null)
 				log.error("Failed to await effect {}", effectID, e);
-			else if (result != null)
-				source.sendResponse(result);
 			return null;
 		}, effectPool);
 	}
@@ -350,7 +349,7 @@ public class CrowdControl {
 			message
 		));
 
-		CompletableFuture<CCEffectResponse> responseFuture = effect.getResponseFuture();
+		CompletableFuture<Void> responseFuture = effect.getResponseFuture();
 		if (responseFuture != null) responseFuture.complete(null);
 
 		Future<?> responseThread = effect.getResponseThread();
