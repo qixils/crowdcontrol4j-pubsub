@@ -5,7 +5,7 @@
 junit-jupiter = "5.11.2"
 websocket = "1.5.7"
 jackson = "2.18.0"
-annotations = "25.0.0"
+annotations = "26.0.0"
 jwt = "4.4.0"
 geantyref = "2.0.0"
 
