@@ -4,10 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Instructs the server to adjust the visibility or usability of an effect in the menu.
@@ -36,17 +33,52 @@ public class CCEffectReport {
 	 * Creates a report.
 	 *
 	 * @param identifierType the type of objects being reported on
-	 * @param ids the objects being reported on
-	 * @param status the new status of the objects
+	 * @param status         the new status of the objects
+	 * @param ids            the objects being reported on
 	 */
 	public CCEffectReport(@NotNull IdentifierType identifierType,
-						  @NotNull List<@NotNull String> ids,
-						  @NotNull ReportStatus status) {
+						  @NotNull ReportStatus status,
+						  @NotNull List<@NotNull String> ids) {
 		this.id = UUID.randomUUID();
 		this.stamp = (int) (System.currentTimeMillis() / 1000L);
 		this.identifierType = identifierType;
 		this.ids = Collections.unmodifiableList(new ArrayList<>(ids));
 		this.status = status;
+	}
+
+	/**
+	 * Creates a report.
+	 *
+	 * @param identifierType the type of objects being reported on
+	 * @param status         the new status of the objects
+	 * @param ids            the objects being reported on
+	 */
+	public CCEffectReport(@NotNull IdentifierType identifierType,
+						  @NotNull ReportStatus status,
+						  @NotNull String @NotNull ... ids) {
+		this(identifierType, status, Arrays.asList(ids));
+	}
+
+	/**
+	 * Creates a report for effects.
+	 *
+	 * @param status the new status of the objects
+	 * @param ids    the objects being reported on
+	 */
+	public CCEffectReport(@NotNull ReportStatus status,
+						  @NotNull List<@NotNull String> ids) {
+		this(IdentifierType.EFFECT, status, ids);
+	}
+
+	/**
+	 * Creates a report for effects.
+	 *
+	 * @param status the new status of the objects
+	 * @param ids    the objects being reported on
+	 */
+	public CCEffectReport(@NotNull ReportStatus status,
+						  @NotNull String @NotNull ... ids) {
+		this(status, Arrays.asList(ids));
 	}
 
 	/**

@@ -44,6 +44,19 @@ public class CCTimedEffectResponse extends CCEffectResponse {
 	}
 
 	/**
+	 * Creates a response.
+	 *
+	 * @param requestID the ID of the request
+	 * @param status    the status of the request
+	 * @param timeRemaining the time remaining on the effect in milliseconds
+	 */
+	public CCTimedEffectResponse(@NotNull UUID requestID,
+								 @NotNull ResponseStatus status,
+								 long timeRemaining) {
+		this(requestID, status, "", timeRemaining);
+	}
+
+	/**
 	 * Gets the time remaining on the effect in milliseconds.
 	 *
 	 * @return milliseconds

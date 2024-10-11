@@ -36,4 +36,15 @@ public class CCInstantEffectResponse extends CCEffectResponse {
 			throw new IllegalArgumentException("Expected an instant status, received timed status " + status);
 		}
 	}
+
+	/**
+	 * Creates a response.
+	 *
+	 * @param requestID the ID of the request
+	 * @param status    the status of the request
+	 */
+	public CCInstantEffectResponse(@NotNull UUID requestID,
+								   @NotNull ResponseStatus status) {
+		this(requestID, status, "");
+	}
 }

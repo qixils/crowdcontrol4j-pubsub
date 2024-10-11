@@ -14,6 +14,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.*;
@@ -48,6 +49,15 @@ public class CrowdControl {
 		this.gameId = gameId;
 		this.gamePackId = gamePackId;
 		this.dataFolder = dataFolder;
+
+		if (!Files.exists(dataFolder)) {
+			try {
+				Files.createDirectories(dataFolder);
+			} catch (Exception e) {
+				throw new IllegalStateException("Could not create data folder", e);
+			}
+		}
+
 		loadGamePack();
 	}
 

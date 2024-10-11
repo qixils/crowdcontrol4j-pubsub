@@ -60,8 +60,7 @@ final class ActiveEffect {
 		setCompleter(cc.getTimedEffectPool().schedule(() -> {
 			player.sendResponse(new CCInstantEffectResponse(
 				payload.getRequestId(),
-				ResponseStatus.TIMED_END,
-				""
+				ResponseStatus.TIMED_END
 			));
 
 			if (!(effect instanceof CCTimedEffect)) return;
@@ -94,7 +93,6 @@ final class ActiveEffect {
 		player.sendResponse(new CCTimedEffectResponse(
 			payload.getRequestId(),
 			ResponseStatus.TIMED_PAUSE,
-			"",
 			timeRemaining
 		));
 
@@ -114,7 +112,6 @@ final class ActiveEffect {
 		player.sendResponse(new CCTimedEffectResponse(
 			payload.getRequestId(),
 			ResponseStatus.TIMED_RESUME,
-			"",
 			timeRemaining
 		));
 
