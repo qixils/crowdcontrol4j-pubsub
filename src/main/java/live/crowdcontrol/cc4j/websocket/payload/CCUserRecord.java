@@ -2,6 +2,7 @@ package live.crowdcontrol.cc4j.websocket.payload;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import live.crowdcontrol.cc4j.IUserRecord;
 import org.intellij.lang.annotations.Pattern;
 import org.intellij.lang.annotations.Subst;
 import org.jetbrains.annotations.NotNull;
@@ -11,7 +12,7 @@ import static live.crowdcontrol.cc4j.websocket.UserToken.CCUID_PATTERN;
 /**
  * A record detailing information about a Crowd Control user.
  */
-public class CCUserRecord {
+public class CCUserRecord implements IUserRecord {
 	@Subst("ccuid-01j7cnrvpbh5aw45pwpe1vqvdw")
 	@Pattern(CCUID_PATTERN)
 	private final @NotNull String ccUID;
@@ -42,39 +43,25 @@ public class CCUserRecord {
 		this.originID = originID;
 	}
 
-	/**
-	 * Gets the user's Crowd Control User ID.
-	 *
-	 * @return ccUID
-	 */
 	@Pattern(CCUID_PATTERN)
+	@Override
+	@JsonProperty("ccUID")
 	public @NotNull String getId() {
 		return ccUID;
 	}
 
-	/**
-	 * Gets the user's display name.
-	 *
-	 * @return display name
-	 */
+	@Override
 	public @NotNull String getName() {
 		return name;
 	}
 
-	/**
-	 * Gets the type of profile the user logged in with.
-	 *
-	 * @return profile type
-	 */
+	@Override
 	public @NotNull ProfileType getProfile() {
 		return profile;
 	}
 
-	/**
-	 * Gets the ID of the user on their {@link #getProfile() home platform}.
-	 *
-	 * @return origin id
-	 */
+	@Override
+	@JsonProperty("originID")
 	public @NotNull String getOriginId() {
 		return originID;
 	}

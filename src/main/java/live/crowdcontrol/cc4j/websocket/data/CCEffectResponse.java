@@ -15,6 +15,7 @@ import java.util.UUID;
 public abstract class CCEffectResponse {
 	protected final @NotNull UUID id;
 	protected final int stamp;
+	@JsonProperty("request")
 	protected final @NotNull UUID request;
 	protected final @NotNull String message;
 	protected final @NotNull ResponseStatus status;
@@ -74,6 +75,7 @@ public abstract class CCEffectResponse {
 	 *
 	 * @return request ID
 	 */
+	@JsonProperty("request")
 	public @NotNull UUID getRequestId() {
 		return request;
 	}
@@ -83,6 +85,7 @@ public abstract class CCEffectResponse {
 	 *
 	 * @return unix epoch seconds timestamp
 	 */
+	@JsonProperty("stamp")
 	public int getTimestamp() {
 		return stamp;
 	}

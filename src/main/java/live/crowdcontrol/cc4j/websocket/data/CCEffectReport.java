@@ -95,6 +95,7 @@ public class CCEffectReport {
 	 *
 	 * @return unix epoch seconds timestamp
 	 */
+	@JsonProperty("stamp")
 	public long getTimestamp() {
 		return stamp;
 	}

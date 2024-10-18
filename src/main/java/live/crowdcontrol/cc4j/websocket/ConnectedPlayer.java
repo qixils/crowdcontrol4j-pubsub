@@ -1,6 +1,6 @@
 package live.crowdcontrol.cc4j.websocket;
 
-import com.auth0.jwt.JWT;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -10,6 +10,7 @@ import live.crowdcontrol.cc4j.CCPlayer;
 import live.crowdcontrol.cc4j.CrowdControl;
 import live.crowdcontrol.cc4j.util.CloseData;
 import live.crowdcontrol.cc4j.util.EventManager;
+import live.crowdcontrol.cc4j.util.TokenUtils;
 import live.crowdcontrol.cc4j.websocket.data.*;
 import live.crowdcontrol.cc4j.websocket.http.GameSessionStartData;
 import live.crowdcontrol.cc4j.websocket.http.GameSessionStartPayload;
@@ -51,10 +52,12 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 	protected @Nullable UserToken userToken;
 	protected @Nullable String gameSessionID;
 	protected boolean privateAvailable;
+	protected int sleep = 1;
 
 	static {
 		ObjectMapper mapper = new ObjectMapper();
 		mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+		mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 		SimpleModule module = new SimpleModule("CrowdControlSerializers");
 		module.addDeserializer(CCName.class, new CCName.CCNameAdapter());
 		mapper.registerModule(module);
@@ -64,17 +67,25 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 	// WebSocket Impl
 
 	public ConnectedPlayer(@NotNull UUID uuid, @NotNull CrowdControl parent) {
-		super(URI.create("wss://pubsub.crowdcontrol.live/"));
+		super(URI.create("wss://m9xw37fv0b.execute-api.us-east-1.amazonaws.com/lexikiq"));
 
 		this.parent = parent;
 		this.uuid = uuid;
 		this.tokenPath = parent.getDataFolder().resolve(uuid + ".token");
 		this.eventManager = new EventManager(parent);
 
-		this.eventManager.registerEventConsumer(CCEventType.CONNECTED, handshake -> send(new SocketRequest("whoami")));
+		this.eventManager.registerEventConsumer(CCEventType.CONNECTED, handshake -> {
+			send(new SocketRequest("whoami"));
+			subscribe();
+		});
 		this.eventManager.registerEventConsumer(CCEventType.DISCONNECTED, data -> {
 			this.connectionID = null;
 			if (this.parent.getPlayer(uuid) != this) return;
+			try {
+				Thread.sleep(sleep * 1000L);
+			} catch (InterruptedException ignored) {
+			}
+			sleep *= 2;
 			reconnect(); // reconnect!
 		});
 		this.eventManager.registerEventConsumer(CCEventType.IDENTIFIED, payload -> this.connectionID = payload.getConnectionId());
@@ -145,10 +156,24 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 	// Semi Boilerplate
 
 	void send(SocketRequest request) {
+		String message;
 		try {
-			send(JACKSON.writeValueAsString(request));
+			message = JACKSON.writeValueAsString(request);
 		} catch (JsonProcessingException e) {
-			log.warn("Failed to send message {}", request, e);
+			log.warn("Failed to encode message {}", request, e);
+			return;
+		}
+
+		if (!isOpen()) {
+			log.warn("Attempted to send message {} before connecting", message);
+			return;
+		}
+
+		try {
+			send(message);
+			log.info("Sent message {}", message);
+		} catch (Exception e) {
+			log.warn("Failed to send message {}", message, e);
 		}
 	}
 
@@ -178,6 +203,7 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 	@Override
 	public boolean sendReport(@NotNull CCEffectReport @NotNull ... reports) {
 		if (reports.length == 0) return false;
+		// TODO: don't send redundant reports
 		return sendRPC(new CallData<>(
 			CallDataMethod.EFFECT_REPORT,
 			Arrays.asList(reports)
@@ -221,7 +247,7 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 
 	public boolean setToken(String token) {
 		try {
-			this.userToken = JACKSON.readValue(JWT.decode(token).getPayload(), UserToken.class);
+			this.userToken = JACKSON.readValue(TokenUtils.decodePayload(token), UserToken.class);
 
 			if (Instant.ofEpochSecond(this.userToken.getExp()).plus(1, ChronoUnit.DAYS).isBefore(Instant.now())) {
 				log.warn("User {}'s auth token has expired", uuid);
@@ -229,7 +255,7 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 				eventManager.dispatch(CCEventType.AUTH_EXPIRED);
 				return false;
 			}
-		} catch (JsonProcessingException e) {
+		} catch (Exception e) {
 			log.warn("Failed to set token {}", token, e);
 			return false;
 		}

@@ -22,6 +22,7 @@ public class GamePack {
 		this.effects = effects;
 	}
 
+	@JsonProperty("gamePackID")
 	public @NotNull String getGamePackId() {
 		return gamePackID;
 	}

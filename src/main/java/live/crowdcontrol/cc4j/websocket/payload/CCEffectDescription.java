@@ -43,6 +43,7 @@ public class CCEffectDescription extends CCBaseEffectDescription {
 	 *
 	 * @return effectID
 	 */
+	@JsonProperty("effectID")
 	public @NotNull String getEffectId() {
 		return effectID;
 	}

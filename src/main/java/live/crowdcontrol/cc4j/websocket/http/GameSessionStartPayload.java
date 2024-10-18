@@ -41,6 +41,7 @@ public class GameSessionStartPayload {
 	 *
 	 * @return gameSessionID
 	 */
+	@JsonProperty("gameSessionID")
 	public @NotNull String getGameSessionId() {
 		return gameSessionID;
 	}

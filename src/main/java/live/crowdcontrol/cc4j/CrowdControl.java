@@ -39,15 +39,15 @@ public class CrowdControl {
 	protected final @NotNull ExecutorService eventPool = Executors.newCachedThreadPool();
 	protected final @NotNull HttpUtil httpUtil = new HttpUtil(this);
 	protected final @NotNull String gameId;
-	protected final @NotNull String gamePackId;
+	protected final @NotNull String gamePackID;
 	protected final @NotNull Path dataFolder;
 	protected @Nullable GamePack gamePack;
 
 	public CrowdControl(@NotNull String gameId,
-						@NotNull String gamePackId,
+						@NotNull String gamePackID,
 						@NotNull Path dataFolder) {
 		this.gameId = gameId;
-		this.gamePackId = gamePackId;
+		this.gamePackID = gamePackID;
 		this.dataFolder = dataFolder;
 
 		if (!Files.exists(dataFolder)) {
@@ -76,7 +76,7 @@ public class CrowdControl {
 	 * @return gamePackID
 	 */
 	public @NotNull String getGamePackId() {
-		return gamePackId;
+		return gamePackID;
 	}
 
 	/**
@@ -143,7 +143,7 @@ public class CrowdControl {
 		}, null).thenAcceptAsync(gamePacks -> {
 			if (gamePacks == null) return;
 			for (GamePack gamePack : gamePacks) {
-				if (!gamePack.getGamePackId().equalsIgnoreCase(gamePackId)) continue;
+				if (!gamePack.getGamePackId().equalsIgnoreCase(gamePackID)) continue;
 				this.gamePack = gamePack;
 				return;
 			}
@@ -241,8 +241,8 @@ public class CrowdControl {
 	 */
 	public boolean addEffect(@NotNull String effectID, @NotNull Supplier<@NotNull CCEffect> supplier) {
 		if (!effectID.matches(EFFECT_ID_PATTERN)) {
-			log.error("Effect ID {} should match pattern {}", effectID, EFFECT_ID_PATTERN);
-			return false;
+			log.warn("Effect ID {} should match pattern {}", effectID, EFFECT_ID_PATTERN);
+//			return false;
 		}
 		if (effects.containsKey(effectID)) {
 			log.error("Effect ID {} is already registered", effectID);
@@ -342,6 +342,9 @@ public class CrowdControl {
 		if (responseTimeout != null) responseTimeout.cancel(false);
 
 		if (response.getStatus() != ResponseStatus.TIMED_BEGIN) return;
+
+		// TODO: something is wrong :(
+
 		if (!(response instanceof CCTimedEffectResponse)) return;
 		CCTimedEffectResponse timedResponse = (CCTimedEffectResponse) response;
 

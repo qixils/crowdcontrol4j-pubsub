@@ -48,7 +48,7 @@ public final class EventManager {
 			try {
 				listener.accept(record.getEventBody());
 			} catch (Exception e) {
-				log.error("Failed to dispatch event {} to listener {}", record.getEventType(), listener.getClass().getSimpleName());
+				log.error("Failed to dispatch event {} to listener {}", record.getEventType(), listener.getClass().getSimpleName(), e);
 			}
 		});
 	}

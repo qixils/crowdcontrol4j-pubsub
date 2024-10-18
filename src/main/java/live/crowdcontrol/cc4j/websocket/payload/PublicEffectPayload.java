@@ -11,34 +11,44 @@ import java.util.UUID;
  */
 public class PublicEffectPayload {
 
-	protected @NotNull UUID requestID;
-	protected long timestamp;
-	protected @NotNull CCEffectDescription effect;
-	protected @NotNull CCUserRecord target;
-	protected @Nullable CCUserRecord origin;
-	protected @Nullable CCUserRecord requester;
-	protected boolean anonymous;
-	protected int quantity;
-	protected long localTimestamp = System.currentTimeMillis();
+	protected final @NotNull UUID requestID;
+	protected final long timestamp;
+	protected final @NotNull CCEffectDescription effect;
+	protected final @NotNull CCUserRecord target;
+	protected final @Nullable CCUserRecord origin;
+	protected final @Nullable CCUserRecord requester;
+	protected final boolean anonymous;
+	protected final int quantity;
+	protected final long localTimestamp = System.currentTimeMillis();
 	// sourceDetails
 	// game
 	// gamePack
 	// parameters
 
-	// json fixers
-
-	@JsonProperty("quantity")
-	void setQuantity(int quantity) {
+	public PublicEffectPayload(@JsonProperty("requestID") @NotNull UUID requestID,
+							   @JsonProperty("timestamp") long timestamp,
+							   @JsonProperty("effect") @NotNull CCEffectDescription effect,
+							   @JsonProperty("target") @NotNull CCUserRecord target,
+							   @JsonProperty("origin") @Nullable CCUserRecord origin,
+							   @JsonProperty("requester") @Nullable CCUserRecord requester,
+							   @JsonProperty("anonymous") boolean anonymous,
+							   @JsonProperty("quantity") int quantity) {
+		this.requestID = requestID;
+		this.timestamp = timestamp;
+		this.effect = effect;
+		this.target = target;
+		this.origin = origin;
+		this.requester = requester;
+		this.anonymous = anonymous;
 		this.quantity = Math.max(1, quantity);
 	}
-
-	// boring getters
 
 	/**
 	 * Gets the ID of the request.
 	 *
 	 * @return requestID
 	 */
+	@JsonProperty("requestID")
 	public @NotNull UUID getRequestId() {
 		return requestID;
 	}

@@ -139,6 +139,7 @@ public class CCBaseEffectDescription {
 	 *
 	 * @return is admin-only
 	 */
+	@JsonProperty("admin")
 	public boolean isAdminOnly() {
 		return admin;
 	}
@@ -167,6 +168,7 @@ public class CCBaseEffectDescription {
 	 *
 	 * @return groups
 	 */
+	@JsonProperty("category")
 	public @Nullable List<String> getCategories() {
 		return category;
 	}
@@ -178,6 +180,7 @@ public class CCBaseEffectDescription {
 	 *
 	 * @return groups
 	 */
+	@JsonProperty("group")
 	public @Nullable List<String> getGroups() {
 		return group;
 	}

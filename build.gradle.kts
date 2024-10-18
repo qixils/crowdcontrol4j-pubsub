@@ -28,7 +28,6 @@ dependencies {
     implementation(libs.jackson.core)
     implementation(libs.jackson.annotations)
     implementation(libs.jackson.databind)
-    implementation(libs.jwt)
     api(libs.websocket)
     api(libs.geantyref)
     api(libs.annotations)

@@ -25,6 +25,7 @@ public class GameSessionStopData {
 	 *
 	 * @return gameSessionID
 	 */
+	@JsonProperty("gameSessionID")
 	public @Nullable String getGameSessionId() {
 		return gameSessionID;
 	}

@@ -18,6 +18,7 @@ public class WhoAmIPayload {
 	 *
 	 * @return connectionID
 	 */
+	@JsonProperty("connectionID")
 	public @NotNull String getConnectionId() {
 		return connectionID;
 	}

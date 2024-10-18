@@ -6,7 +6,6 @@ junit-jupiter = "5.11.2"
 websocket = "1.5.7"
 jackson = "2.18.0"
 annotations = "25.0.0"
-jwt = "4.4.0"
 geantyref = "2.0.0"
 
 [libraries]
@@ -16,5 +15,4 @@ jackson-core = { module = "com.fasterxml.jackson.core:jackson-core", version.ref
 jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref="jackson" }
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref="jackson" }
 annotations = { module = "org.jetbrains:annotations", version.ref = "annotations" }
-jwt = { module = "com.auth0:java-jwt", version.ref = "jwt" }
 geantyref = { module = "io.leangen.geantyref:geantyref", version.ref = "geantyref" }

@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import live.crowdcontrol.cc4j.CrowdControl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -18,10 +20,11 @@ import static live.crowdcontrol.cc4j.websocket.ConnectedPlayer.JACKSON;
 public class HttpUtil {
 	public static final @NotNull URL OPEN_API_URL;
 	private static final @NotNull TypeReference<String> STRING_TYPE = new TypeReference<String>() { };
+	private static final Logger log = LoggerFactory.getLogger(HttpUtil.class);
 
 	static {
 		try {
-			OPEN_API_URL = new URL("https://openapi.crowdcontrol.live/");
+			OPEN_API_URL = new URL("https://juifmnh7bf.execute-api.us-east-1.amazonaws.com/");
 		} catch (MalformedURLException e) {
 			throw new RuntimeException("Failed to create OpenAPI URL", e);
 		}
@@ -39,7 +42,8 @@ public class HttpUtil {
 			try {
 				URL url = new URL(OPEN_API_URL, spec);
 				con = (HttpURLConnection) url.openConnection();
-				con.setRequestMethod("POST");
+				con.setRequestMethod(method);
+				con.setRequestProperty("User-Agent", "crowdcontrol4j");
 				con.setRequestProperty("Accept", "application/json");
 				if (token != null) {
 					con.setRequestProperty("Authorization", "cc-auth-token " + token);
@@ -50,6 +54,7 @@ public class HttpUtil {
 					con.setRequestProperty("Content-Type", "application/json");
 					con.setDoOutput(true);
 					try (OutputStream os = con.getOutputStream()) {
+						log.info("Outputting {}", JACKSON.writeValueAsString(data));
 						JACKSON.writeValue(os, data);
 					}
 				}

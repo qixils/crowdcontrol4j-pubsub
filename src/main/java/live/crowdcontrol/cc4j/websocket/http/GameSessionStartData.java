@@ -43,6 +43,7 @@ public class GameSessionStartData {
 	 *
 	 * @return gamePackID
 	 */
+	@JsonProperty("gamePackID")
 	public @NotNull String getGamePackId() {
 		return gamePackID;
 	}
