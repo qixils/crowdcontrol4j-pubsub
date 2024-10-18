@@ -67,7 +67,7 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 	// WebSocket Impl
 
 	public ConnectedPlayer(@NotNull UUID uuid, @NotNull CrowdControl parent) {
-		super(URI.create("wss://m9xw37fv0b.execute-api.us-east-1.amazonaws.com/lexikiq"));
+		super(URI.create("wss://pubsub.crowdcontrol.live/"));
 
 		this.parent = parent;
 		this.uuid = uuid;

@@ -190,6 +190,7 @@ public class CrowdControl {
 	public boolean removePlayer(@NotNull UUID playerId) {
 		ConnectedPlayer existing = players.remove(playerId);
 		if (existing == null) return false;
+		// TODO: refund effects
 		existing.stopSession();
 		existing.close();
 		return true;
@@ -343,8 +344,6 @@ public class CrowdControl {
 
 		if (response.getStatus() != ResponseStatus.TIMED_BEGIN) return;
 
-		// TODO: something is wrong :(
-
 		if (!(response instanceof CCTimedEffectResponse)) return;
 		CCTimedEffectResponse timedResponse = (CCTimedEffectResponse) response;
 
@@ -380,7 +379,7 @@ public class CrowdControl {
 	public void cancelByRequestId(@NotNull UUID requestId) {
 		ActiveEffect effect = pendingRequests.remove(requestId);
 		if (effect != null) {
-			cancel(effect, "Effect paused before execution");
+			cancel(effect, "Effect cancelled before execution");
 			return;
 		}
 
@@ -388,6 +387,17 @@ public class CrowdControl {
 		if (effect == null) return;
 
 		// TODO
+	}
+
+	public void cancelAll() {
+		Set<UUID> keys = new HashSet<>(pendingRequests.keySet());
+		for (UUID key : keys)
+			cancel(pendingRequests.remove(key), "Effect cancelled before execution");
+
+		keys = new HashSet<>(timedRequests.keySet());
+		for (UUID key : keys) {
+			// TODO
+		}
 	}
 
 	/**
@@ -446,5 +456,19 @@ public class CrowdControl {
 	 */
 	public boolean isPlayerEffectActive(@NotNull String effectId, @NotNull UUID playerId) {
 		return timedRequests.values().stream().anyMatch(effect -> effect.getPlayer().getUuid().equals(playerId) && effect.getPayload().getEffect().getEffectId().equals(effectId));
+	}
+
+	public void close() {
+		cancelAll();
+
+		Set<UUID> uuids = new HashSet<>(players.keySet());
+		for (UUID uuid : uuids)
+			removePlayer(uuid);
+
+		effectPool.shutdown();
+		timedEffectPool.shutdown();
+		eventPool.shutdown();
+
+		// TODO: track and block various calls?
 	}
 }

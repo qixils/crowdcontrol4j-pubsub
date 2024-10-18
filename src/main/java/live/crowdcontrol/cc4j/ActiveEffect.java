@@ -58,10 +58,14 @@ final class ActiveEffect {
 	public void scheduleCompleter(long timeRemaining) {
 		this.timeRemaining = timeRemaining;
 		setCompleter(cc.getTimedEffectPool().schedule(() -> {
-			player.sendResponse(new CCInstantEffectResponse(
-				payload.getRequestId(),
-				ResponseStatus.TIMED_END
-			));
+			try {
+				player.sendResponse(new CCInstantEffectResponse(
+					payload.getRequestId(),
+					ResponseStatus.TIMED_END
+				));
+			} catch (Exception e) {
+				log.error("Failed to send response", e);
+			}
 
 			if (!(effect instanceof CCTimedEffect)) return;
 			try {

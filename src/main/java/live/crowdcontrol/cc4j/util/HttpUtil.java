@@ -24,7 +24,7 @@ public class HttpUtil {
 
 	static {
 		try {
-			OPEN_API_URL = new URL("https://juifmnh7bf.execute-api.us-east-1.amazonaws.com/");
+			OPEN_API_URL = new URL("https://openapi.crowdcontrol.live/");
 		} catch (MalformedURLException e) {
 			throw new RuntimeException("Failed to create OpenAPI URL", e);
 		}

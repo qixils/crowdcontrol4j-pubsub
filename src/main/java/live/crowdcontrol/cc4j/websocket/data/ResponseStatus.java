@@ -46,7 +46,7 @@ public enum ResponseStatus {
 	/**
 	 * The timed effect has ended.
 	 */
-	TIMED_END("timedEnd", true, false),
+	TIMED_END("timedEnd", false, false),
 	/**
 	 * The JSON-specified value could not be decoded.
 	 */
