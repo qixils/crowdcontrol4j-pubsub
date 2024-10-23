@@ -24,7 +24,7 @@ public class HttpUtil {
 
 	static {
 		try {
-			OPEN_API_URL = new URL("https://openapi.crowdcontrol.live/");
+			OPEN_API_URL = new URL("https://juifmnh7bf.execute-api.us-east-1.amazonaws.com");
 		} catch (MalformedURLException e) {
 			throw new RuntimeException("Failed to create OpenAPI URL", e);
 		}
@@ -48,8 +48,8 @@ public class HttpUtil {
 				if (token != null) {
 					con.setRequestProperty("Authorization", "cc-auth-token " + token);
 				}
-				con.setConnectTimeout(5000);
-				con.setReadTimeout(5000);
+				con.setConnectTimeout(10000);
+				con.setReadTimeout(10000);
 				if (data != null) {
 					con.setRequestProperty("Content-Type", "application/json");
 					con.setDoOutput(true);

@@ -106,6 +106,12 @@ public class CCEventType<T> {
 	 */
 	public static final CCEventType<PublicEffectPayload> PRV_EFFECT_REQUEST = new CCEventType<>("prv_effect_request", PublicEffectPayload.class);
 
+	public static final CCEventType<PublicEffectPayload> EFFECT_FAILURE = new CCEventType<>("effect_request", PublicEffectPayload.class);
+
+	public static final CCEventType<PublicEffectPayload> PUB_EFFECT_FAILURE = new CCEventType<>("pub_effect_request", PublicEffectPayload.class);
+
+	public static final CCEventType<PublicEffectPayload> PRV_EFFECT_FAILURE = new CCEventType<>("prv_effect_request", PublicEffectPayload.class);
+
 	/**
 	 * Called when a connection has attempted to subscribe to some topics.
 	 */

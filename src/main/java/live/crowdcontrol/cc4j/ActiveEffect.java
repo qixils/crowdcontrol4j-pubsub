@@ -31,6 +31,7 @@ final class ActiveEffect {
 	private @Nullable CompletableFuture<Void> responseFuture;
 	private @Nullable Future<?> responseThread;
 	private @Nullable ScheduledFuture<?> responseTimeout;
+	private boolean completed = false;
 
 	public ActiveEffect(@NotNull CrowdControl cc,
 						@NotNull CCEffect effect,
@@ -50,6 +51,9 @@ final class ActiveEffect {
 		return player;
 	}
 
+	public boolean isTimed() {
+		return startedAt != null || timeRemaining > -1;
+	}
 
 	public @Nullable Future<?> getCompleter() {
 		return completer;
@@ -57,23 +61,7 @@ final class ActiveEffect {
 
 	public void scheduleCompleter(long timeRemaining) {
 		this.timeRemaining = timeRemaining;
-		setCompleter(cc.getTimedEffectPool().schedule(() -> {
-			try {
-				player.sendResponse(new CCInstantEffectResponse(
-					payload.getRequestId(),
-					ResponseStatus.TIMED_END
-				));
-			} catch (Exception e) {
-				log.error("Failed to send response", e);
-			}
-
-			if (!(effect instanceof CCTimedEffect)) return;
-			try {
-				((CCTimedEffect) effect).onEnd(payload, player);
-			} catch (Exception e) {
-				log.error("Failed to invoke {} end handler for request {}", payload.getEffect().getEffectId(), payload.getRequestId());
-			}
-		}, timeRemaining, TimeUnit.MILLISECONDS));
+		setCompleter(cc.getTimedEffectPool().schedule(this::complete, timeRemaining, TimeUnit.MILLISECONDS));
 	}
 
 	private void setCompleter(@Nullable ScheduledFuture<?> completer) {
@@ -84,6 +72,28 @@ final class ActiveEffect {
 		this.startedAt = completer != null
 			? Instant.now()
 			: null;
+	}
+
+	public void complete() {
+		if (completed) return;
+		completed = true;
+		timeRemaining = 0;
+
+		try {
+			player.sendResponse(new CCInstantEffectResponse(
+				payload.getRequestId(),
+				ResponseStatus.TIMED_END
+			));
+		} catch (Exception e) {
+			log.error("Failed to send response", e);
+		}
+
+		if (!(effect instanceof CCTimedEffect)) return;
+		try {
+			((CCTimedEffect) effect).onEnd(payload, player);
+		} catch (Exception e) {
+			log.error("Failed to invoke {} end handler for request {}", payload.getEffect().getEffectId(), payload.getRequestId());
+		}
 	}
 
 	public void pause() {

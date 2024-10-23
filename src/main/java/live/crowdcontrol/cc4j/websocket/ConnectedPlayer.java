@@ -67,7 +67,7 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 	// WebSocket Impl
 
 	public ConnectedPlayer(@NotNull UUID uuid, @NotNull CrowdControl parent) {
-		super(URI.create("wss://pubsub.crowdcontrol.live/"));
+		super(URI.create("wss://m9xw37fv0b.execute-api.us-east-1.amazonaws.com/lexikiq"));
 
 		this.parent = parent;
 		this.uuid = uuid;
@@ -96,6 +96,7 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 			privateAvailable = this.subscriptions.contains("prv/" + this.userToken.getId());
 		});
 		this.eventManager.registerEventConsumer(CCEventType.EFFECT_REQUEST, payload -> this.parent.executeEffect(payload, this));
+		this.eventManager.registerEventConsumer(CCEventType.EFFECT_FAILURE, payload -> parent.cancelByRequestId(payload.getRequestId()));
 
 		loadToken();
 	}
@@ -122,11 +123,19 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 					break;
 				case "effect-request":
 					if (!event.domain.equals("pub") && !event.domain.equals("prv")) return;
-					PublicEffectPayload payload = JACKSON.treeToValue(event.payload, PublicEffectPayload.class);
-					if (!"game".equals(payload.getEffect().getType())) return;
-					eventManager.dispatch(event.domain.equals("pub") ? CCEventType.PUB_EFFECT_REQUEST : CCEventType.PRV_EFFECT_REQUEST, payload);
+					PublicEffectPayload requestPayload = JACKSON.treeToValue(event.payload, PublicEffectPayload.class);
+					if (!"game".equals(requestPayload.getEffect().getType())) return;
+					eventManager.dispatch(event.domain.equals("pub") ? CCEventType.PUB_EFFECT_REQUEST : CCEventType.PRV_EFFECT_REQUEST, requestPayload);
 					if (privateAvailable && event.domain.equals("pub")) return;
-					eventManager.dispatch(CCEventType.EFFECT_REQUEST, payload);
+					eventManager.dispatch(CCEventType.EFFECT_REQUEST, requestPayload);
+					break;
+				case "effect-failure":
+					if (!event.domain.equals("pub") && !event.domain.equals("prv")) return;
+					PublicEffectPayload failurePayload = JACKSON.treeToValue(event.payload, PublicEffectPayload.class);
+					if (!"game".equals(failurePayload.getEffect().getType())) return;
+					eventManager.dispatch(event.domain.equals("pub") ? CCEventType.PUB_EFFECT_FAILURE : CCEventType.PRV_EFFECT_FAILURE, failurePayload);
+					if (privateAvailable && event.domain.equals("pub")) return;
+					eventManager.dispatch(CCEventType.EFFECT_FAILURE, failurePayload);
 					break;
 				case "game-session-start":
 					eventManager.dispatch(CCEventType.SESSION_STARTED, JACKSON.treeToValue(event.payload, GameSessionStartPayload.class));

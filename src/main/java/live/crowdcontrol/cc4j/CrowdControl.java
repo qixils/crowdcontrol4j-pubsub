@@ -355,11 +355,15 @@ public class CrowdControl {
 	private void cancel(ActiveEffect effect, String message) {
 		pendingRequests.remove(effect.getPayload().getRequestId());
 
-		effect.getPlayer().sendResponse(new CCInstantEffectResponse(
-			effect.getPayload().getRequestId(),
-			ResponseStatus.FAIL_TEMPORARY,
-			message
-		));
+		if (effect.isTimed()) {
+			effect.complete();
+		} else {
+			effect.getPlayer().sendResponse(new CCInstantEffectResponse(
+				effect.getPayload().getRequestId(),
+				ResponseStatus.FAIL_TEMPORARY,
+				message
+			));
+		}
 
 		CompletableFuture<Void> responseFuture = effect.getResponseFuture();
 		if (responseFuture != null) responseFuture.complete(null);
@@ -384,20 +388,19 @@ public class CrowdControl {
 		}
 
 		effect = timedRequests.get(requestId);
-		if (effect == null) return;
-
-		// TODO
+		if (effect != null) {
+			cancel(effect, "Effect cancelled during execution");
+		}
 	}
 
 	public void cancelAll() {
 		Set<UUID> keys = new HashSet<>(pendingRequests.keySet());
 		for (UUID key : keys)
-			cancel(pendingRequests.remove(key), "Effect cancelled before execution");
+			cancel(pendingRequests.get(key), "Effect cancelled before execution");
 
 		keys = new HashSet<>(timedRequests.keySet());
-		for (UUID key : keys) {
-			// TODO
-		}
+		for (UUID key : keys)
+			cancel(timedRequests.get(key), "Effect cancelled during execution");
 	}
 
 	/**
