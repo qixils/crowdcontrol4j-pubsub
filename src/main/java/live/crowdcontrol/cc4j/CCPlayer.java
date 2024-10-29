@@ -46,6 +46,12 @@ public interface CCPlayer {
 	UserToken getUserToken();
 
 	/**
+	 * Gets the URL for the player to sign in with, if available.
+	 */
+	@Nullable
+	String getAuthUrl();
+
+	/**
 	 * Gets the ID of the player's active game session.
 	 *
 	 * @return gameSessionID or null
@@ -74,6 +80,14 @@ public interface CCPlayer {
 	 * @return whether the report could be sent
 	 */
 	boolean sendReport(@NotNull CCEffectReport @NotNull ... reports);
+
+	/**
+	 * Finalizes a user's login.
+	 *
+	 * @param code login code
+	 * @return whether the code could be sent (not necessarily whether the code was accepted)
+	 */
+	boolean authenticate(@NotNull String code);
 
 	/**
 	 * Attempts to start the streamer's session.

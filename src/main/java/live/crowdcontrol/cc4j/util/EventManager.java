@@ -40,6 +40,7 @@ public final class EventManager {
 		if (catchUpPeriod == 0) return Stream.empty();
 		return records.stream()
 			.flatMap(record -> event.equals(record.getEventType()) ? Stream.of((EventRecord<T>) record) : Stream.empty())
+			.peek(record -> log.info("Found record {} for event {}", record, event))
 			.filter(record -> catchUpPeriod == -1 || !Instant.now().minusSeconds(catchUpPeriod).isBefore(record.getTriggeredAt()));
 	}
 

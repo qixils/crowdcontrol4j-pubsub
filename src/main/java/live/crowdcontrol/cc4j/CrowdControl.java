@@ -38,16 +38,19 @@ public class CrowdControl {
 	protected final @NotNull ScheduledExecutorService timedEffectPool = Executors.newScheduledThreadPool(20);
 	protected final @NotNull ExecutorService eventPool = Executors.newCachedThreadPool();
 	protected final @NotNull HttpUtil httpUtil = new HttpUtil(this);
-	protected final @NotNull String gameId;
+	protected final @NotNull String gameID;
 	protected final @NotNull String gamePackID;
+	protected final @NotNull String appID;
 	protected final @NotNull Path dataFolder;
 	protected @Nullable GamePack gamePack;
 
-	public CrowdControl(@NotNull String gameId,
+	public CrowdControl(@NotNull String gameID,
 						@NotNull String gamePackID,
+						@NotNull String appID,
 						@NotNull Path dataFolder) {
-		this.gameId = gameId;
+		this.gameID = gameID;
 		this.gamePackID = gamePackID;
+		this.appID = appID;
 		this.dataFolder = dataFolder;
 
 		if (!Files.exists(dataFolder)) {
@@ -66,8 +69,8 @@ public class CrowdControl {
 	 *
 	 * @return gameID
 	 */
-	public @NotNull String getGameId() {
-		return gameId;
+	public @NotNull String getGameID() {
+		return gameID;
 	}
 
 	/**
@@ -75,8 +78,17 @@ public class CrowdControl {
 	 *
 	 * @return gamePackID
 	 */
-	public @NotNull String getGamePackId() {
+	public @NotNull String getGamePackID() {
 		return gamePackID;
+	}
+
+	/**
+	 * Gets the ID of this game's Crowd Control third-party application.
+	 *
+	 * @return appID
+	 */
+	public @NotNull String getAppID() {
+		return appID;
 	}
 
 	/**
@@ -139,7 +151,7 @@ public class CrowdControl {
 	 * Re-fetches the {@link #getGamePack() game pack}.
 	 */
 	public void loadGamePack() {
-		httpUtil.apiGet(String.format("/games/%s/packs", gameId), new TypeReference<List<GamePack>>() {
+		httpUtil.apiGet(String.format("/games/%s/packs", gameID), new TypeReference<List<GamePack>>() {
 		}, null).thenAcceptAsync(gamePacks -> {
 			if (gamePacks == null) return;
 			for (GamePack gamePack : gamePacks) {

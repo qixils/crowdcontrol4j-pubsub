@@ -14,6 +14,7 @@ import live.crowdcontrol.cc4j.util.TokenUtils;
 import live.crowdcontrol.cc4j.websocket.data.*;
 import live.crowdcontrol.cc4j.websocket.http.*;
 import live.crowdcontrol.cc4j.websocket.payload.*;
+import org.intellij.lang.annotations.Subst;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 import org.jetbrains.annotations.ApiStatus;
@@ -111,17 +112,25 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 	@Override
 	public void onMessage(String message) {
 		try {
+			log.info("Received message {}", message);
 			SocketEvent event = JACKSON.readValue(message, SocketEvent.class);
 			switch (event.type) {
 				case "whoami":
 					eventManager.dispatch(CCEventType.IDENTIFIED, JACKSON.treeToValue(event.payload, WhoAmIPayload.class));
+					break;
+				case "login-progress":
+					eventManager.dispatch(CCEventType.AUTH_PROGRESS);
 					break;
 				case "login-success":
 					setToken(JACKSON.treeToValue(event.payload, LoginSuccessPayload.class).getToken());
 					saveToken();
 					break;
 				case "subscription-result":
-					eventManager.dispatch(CCEventType.SUBSCRIBED, JACKSON.treeToValue(event.payload, SubscriptionResultPayload.class));
+					SubscriptionResultPayload subscriptionPayload = JACKSON.treeToValue(event.payload, SubscriptionResultPayload.class);
+					if (subscriptionPayload == null) break;
+					subscriptionPayload.getSuccess().removeIf(Objects::isNull);
+					subscriptionPayload.getFailure().removeIf(Objects::isNull);
+					eventManager.dispatch(CCEventType.SUBSCRIBED, subscriptionPayload);
 					break;
 				case "effect-request":
 					if (!event.domain.equals("pub") && !event.domain.equals("prv")) return;
@@ -145,7 +154,8 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 				case "game-session-stop":
 					eventManager.dispatch(CCEventType.SESSION_STOPPED, JACKSON.treeToValue(event.payload, GameSessionStopPayload.class));
 					break;
-				// TODO: catch refund and cancel effect
+				// TODO: handle effect menu sync
+				// TODO: handle errors, especially login
 				default:
 					log.debug("Ignoring unknown event {} on domain {}", event.type, event.domain);
 			}
@@ -288,11 +298,21 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 	}
 
 	@Override
+	public boolean authenticate(@Subst("BCDFGH") @NotNull String code) {
+		if (!canSend()) return false;
+		send(new SocketRequest(
+			"login",
+			new LoginData(parent.getAppID(), code)
+		));
+		return true;
+	}
+
+	@Override
 	public @NotNull CompletableFuture<?> startSession(@NotNull CCEffectReport @NotNull ... reports) {
 		if (this.gameSessionID != null) return CompletableFuture.completedFuture(null);
 		if (this.token == null) return CompletableFuture.completedFuture(null);
 		return parent.getHttpUtil().apiPost("/game-session/start", GameSessionStartPayload.class, this.token, new GameSessionStartData(
-			parent.getGamePackId(),
+			parent.getGamePackID(),
 			filterReports(true, reports) // `true` updates the state without
 		)).handle((payload, e) -> {
 			if (e != null) {
@@ -330,10 +350,22 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 	}
 
 	public boolean setToken(String token) {
+		String[] split = token.split(" ");
+		if (split.length > 2) {
+			log.warn("Invalid token length {} for {}", split.length, token);
+			return false;
+		}
+		if (split.length == 2) {
+			if (!Objects.equals(split[0], "cc-auth-token")) {
+				log.warn("Unknown auth token type {} for {}", split[0], token);
+				return false;
+			}
+			token = split[1];
+		}
 		try {
 			this.userToken = JACKSON.readValue(TokenUtils.decodePayload(token), UserToken.class);
 
-			if (Instant.ofEpochSecond(this.userToken.getExp()).plus(1, ChronoUnit.DAYS).isBefore(Instant.now())) {
+			if (Instant.ofEpochSecond(this.userToken.getExp()).minus(6, ChronoUnit.HOURS).isBefore(Instant.now())) {
 				log.warn("User {}'s auth token has expired", uuid);
 				this.userToken = null;
 				eventManager.dispatch(CCEventType.AUTH_EXPIRED);
@@ -393,6 +425,17 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 				this.token
 			)
 		));
+	}
+
+	@Override
+	public @Nullable String getAuthUrl() {
+		if (connectionID == null) return null;
+		return String.format(
+			"https://auth.crowdcontrol.live/?connectionID=%s&appID=%s&scope=game.%s",
+			connectionID,
+			parent.getAppID(),
+			parent.getGameID()
+		);
 	}
 
 	// True Boilerplate

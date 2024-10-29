@@ -51,6 +51,14 @@ public class CCEventType<T> {
 		return Objects.hash(listenerId, typeToken);
 	}
 
+	@Override
+	public String toString() {
+		return "CCEventType{" +
+			"listenerId='" + listenerId + '\'' +
+			", typeToken=" + typeToken +
+			'}';
+	}
+
 	/**
 	 * Called when a player's WebSocket initially establishes its connection.
 	 * The connectionID will be unavailable at this point.
@@ -74,8 +82,18 @@ public class CCEventType<T> {
 	public static final CCEventType<Void> AUTHENTICATED = ofVoid("authenticated");
 
 	/**
+	 * Called when a player signed in to their Crowd Control account
+	 * but has not yet authorized the mod to use their account.
+	 * The user's token will be unavailable at this point.
+	 * The connectionID may be unavailable at this point.
+	 * <p>
+	 * To continue authorization, you will need to call {@link CCPlayer#authenticate(String)}.
+	 */
+	public static final CCEventType<Void> AUTH_PROGRESS = ofVoid("auth_progress");
+
+	/**
 	 * Called when a player's authentication token expires.
-	 * This may happen if they have not re-authenticated in about 6 months.
+	 * This will happen 24 hours after creation.
 	 */
 	public static final CCEventType<Void> AUTH_EXPIRED = ofVoid("auth_expired");
 
