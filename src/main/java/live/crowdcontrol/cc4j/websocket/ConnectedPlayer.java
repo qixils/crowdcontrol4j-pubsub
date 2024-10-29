@@ -12,10 +12,7 @@ import live.crowdcontrol.cc4j.util.CloseData;
 import live.crowdcontrol.cc4j.util.EventManager;
 import live.crowdcontrol.cc4j.util.TokenUtils;
 import live.crowdcontrol.cc4j.websocket.data.*;
-import live.crowdcontrol.cc4j.websocket.http.GameSessionStartData;
-import live.crowdcontrol.cc4j.websocket.http.GameSessionStartPayload;
-import live.crowdcontrol.cc4j.websocket.http.GameSessionStopData;
-import live.crowdcontrol.cc4j.websocket.http.GameSessionStopPayload;
+import live.crowdcontrol.cc4j.websocket.http.*;
 import live.crowdcontrol.cc4j.websocket.payload.*;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
@@ -34,6 +31,8 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * A player connected to the server.
@@ -43,6 +42,8 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 	public static final @NotNull ObjectMapper JACKSON;
 	protected static final @NotNull Logger log = LoggerFactory.getLogger(ConnectedPlayer.class);
 	protected final @NotNull Set<String> subscriptions = new HashSet<>();
+	protected final Map<String, Boolean> visible = new HashMap<>();
+	protected final Map<String, Boolean> available = new HashMap<>();
 	protected final @NotNull EventManager eventManager;
 	protected final @NotNull UUID uuid;
 	protected final @NotNull Path tokenPath;
@@ -51,6 +52,7 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 	protected @Nullable String token;
 	protected @Nullable UserToken userToken;
 	protected @Nullable String gameSessionID;
+	protected @Nullable String lastGameSessionID;
 	protected boolean privateAvailable;
 	protected int sleep = 1;
 
@@ -164,6 +166,14 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 
 	// Semi Boilerplate
 
+	public boolean canSend() {
+		return isOpen();
+	}
+
+	public boolean canSendRPC() {
+		return canSend() && token != null;
+	}
+
 	void send(SocketRequest request) {
 		String message;
 		try {
@@ -173,7 +183,7 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 			return;
 		}
 
-		if (!isOpen()) {
+		if (!canSend()) {
 			log.warn("Attempted to send message {} before connecting", message);
 			return;
 		}
@@ -187,7 +197,8 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 	}
 
 	public boolean sendRPC(CallData<?> call) {
-		if (token == null) return false;
+		if (!canSendRPC()) return false;
+		assert token != null;
 
 		send(new SocketRequest(
 			"rpc",
@@ -211,13 +222,68 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 		));
 	}
 
+	private List<CCEffectReport> filterReports(boolean force, @NotNull CCEffectReport ... reports) {
+		return Stream.of(reports).map(report -> {
+				List<String> ids;
+				IdentifierType idType;
+				switch (report.getIdentifierType()) {
+					case CATEGORY:
+					case GROUP:
+						GamePack gamePack = parent.getGamePack();
+						if (gamePack != null) {
+							Map<String, CCBaseEffectDescription> effects = gamePack.getEffects().getGame();
+							if (effects != null) {
+								// unpack to effect id list
+								List<String> newIds = effects.entrySet().stream()
+									.filter(entry -> {
+										CCBaseEffectDescription effect = entry.getValue();
+										List<String> values = report.getIdentifierType() == IdentifierType.CATEGORY ? effect.getCategories() : effect.getGroups();
+										if (values == null) return false;
+										return report.getIds().stream().anyMatch(values::contains);
+									})
+									.map(Map.Entry::getKey)
+									.collect(Collectors.toList());
+								if (!newIds.isEmpty()) {
+									ids = newIds;
+									idType = IdentifierType.EFFECT;
+									break;
+								}
+							}
+						}
+					default:
+						ids = report.getIds();
+						idType = report.getIdentifierType();
+				}
+				int idSize = ids.size();
+
+				ReportStatus status = report.getStatus();
+				Boolean value = status == ReportStatus.MENU_AVAILABLE || status == ReportStatus.MENU_VISIBLE;
+				Map<String, Boolean> map = (status == ReportStatus.MENU_AVAILABLE || status == ReportStatus.MENU_UNAVAILABLE) ? available : visible;
+				ids = ids.stream().filter(id -> (map.put(idType.getValue() + ":" + id, value) != value) || force).collect(Collectors.toList());
+
+				if (ids.size() == idSize) {
+					// all this unpacking junk was for nothing, we filtered nothing
+					// to save bandwidth let's just use the original packet
+					return report;
+				}
+
+				// use trimmed down id list
+				return new CCEffectReport(idType, status, ids);
+			})
+			.filter(report -> !report.getIds().isEmpty()) // filtered down to nothing
+			.collect(Collectors.toList());
+	}
+
 	@Override
 	public boolean sendReport(@NotNull CCEffectReport @NotNull ... reports) {
-		if (reports.length == 0) return false;
-		// TODO: don't send redundant reports
+		if (!canSendRPC()) return false; // let's not update reports if we can't!!!
+
+		List<CCEffectReport> reportList = filterReports(false, reports);
+		if (reportList.isEmpty()) return true; // really filtered down to nothing! so, it succeeded, i guess?
+
 		return sendRPC(new CallData<>(
 			CallDataMethod.EFFECT_REPORT,
-			Arrays.asList(reports)
+			reportList
 		));
 	}
 
@@ -227,7 +293,7 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 		if (this.token == null) return CompletableFuture.completedFuture(null);
 		return parent.getHttpUtil().apiPost("/game-session/start", GameSessionStartPayload.class, this.token, new GameSessionStartData(
 			parent.getGamePackId(),
-			Arrays.asList(reports)
+			filterReports(true, reports) // `true` updates the state without
 		)).handle((payload, e) -> {
 			if (e != null) {
 				log.warn("Failed to query URL", e);
@@ -238,6 +304,13 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 				return null;
 			}
 			this.gameSessionID = payload.getGameSessionId();
+			// if this is a brand-new session, let's clear old report data
+			if (lastGameSessionID != null && !gameSessionID.equals(lastGameSessionID)) {
+				visible.clear();
+				available.clear();
+				filterReports(true, reports);
+			}
+			lastGameSessionID = gameSessionID;
 			return null;
 		});
 	}
