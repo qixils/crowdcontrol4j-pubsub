@@ -3,7 +3,7 @@
 
 [versions]
 junit-jupiter = "5.11.2"
-websocket = "1.5.7"
+websocket = "1.6.0"
 jackson = "2.18.0"
 annotations = "26.0.1"
 geantyref = "2.0.0"
