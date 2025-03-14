@@ -21,13 +21,12 @@ public interface CCPlayer {
 	UUID getUuid();
 
 	/**
-	 * Gets the ID of this connection.
-	 * Used primarily for authentication.
+	 * Gets the pending auth code of this connection.
 	 *
-	 * @return connection ID
+	 * @return auth code
 	 */
 	@Nullable
-	String getConnectionId();
+	String getAuthCode();
 
 	/**
 	 * Gets the user's token used for making authenticated requests.
@@ -82,14 +81,6 @@ public interface CCPlayer {
 	boolean sendReport(@NotNull CCEffectReport @NotNull ... reports);
 
 	/**
-	 * Finalizes a user's login.
-	 *
-	 * @param code login code
-	 * @return whether the code could be sent (not necessarily whether the code was accepted)
-	 */
-	boolean authenticate(@NotNull String code);
-
-	/**
 	 * Attempts to start the streamer's session.
 	 * May fail if they have not yet authenticated; check {@link #getGameSessionId()} for outcome.
 	 *
@@ -105,4 +96,13 @@ public interface CCPlayer {
 	 */
 	@NotNull
 	CompletableFuture<?> stopSession();
+
+	/**
+	 * Regenerates the user's auth code.
+	 * May fail if the user is already authenticated.
+	 *
+	 * @return future to complete when the auth code has regenerated
+	 */
+	@NotNull
+	CompletableFuture<?> regenerateAuthCode();
 }

@@ -33,11 +33,20 @@ dependencies {
     api(libs.annotations)
 }
 
-// Apply a specific Java toolchain to ease working on different environments.
+// java version
+val targetJavaVersion = 21
+tasks.withType<JavaCompile>().configureEach {
+    options.release.set(targetJavaVersion)
+    options.encoding = Charsets.UTF_8.name()
+}
 java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(8)
+    val javaVersion = JavaVersion.toVersion(targetJavaVersion)
+    if (JavaVersion.current() < javaVersion) {
+        toolchain.languageVersion.set(JavaLanguageVersion.of(targetJavaVersion))
     }
+    sourceCompatibility = javaVersion
+    targetCompatibility = javaVersion
+//    withSourcesJar()
 }
 
 tasks.named<Test>("test") {

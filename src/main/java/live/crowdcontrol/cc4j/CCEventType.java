@@ -5,9 +5,7 @@ import live.crowdcontrol.cc4j.util.CloseData;
 import live.crowdcontrol.cc4j.websocket.data.CCEffectResponse;
 import live.crowdcontrol.cc4j.websocket.http.GameSessionStartPayload;
 import live.crowdcontrol.cc4j.websocket.http.GameSessionStopPayload;
-import live.crowdcontrol.cc4j.websocket.payload.PublicEffectPayload;
-import live.crowdcontrol.cc4j.websocket.payload.SubscriptionResultPayload;
-import live.crowdcontrol.cc4j.websocket.payload.WhoAmIPayload;
+import live.crowdcontrol.cc4j.websocket.payload.*;
 import org.java_websocket.handshake.ServerHandshake;
 import org.jetbrains.annotations.NotNull;
 
@@ -71,9 +69,19 @@ public class CCEventType<T> {
 	public static final CCEventType<CloseData> DISCONNECTED = new CCEventType<>("disconnected", CloseData.class);
 
 	/**
-	 * Called when a player's WebSocket connectionID becomes known.
+	 * Called when an auth code is generated.
 	 */
-	public static final CCEventType<WhoAmIPayload> IDENTIFIED = new CCEventType<>("identified", WhoAmIPayload.class);
+	public static final CCEventType<ApplicationAuthCodePayload> GENERATED_AUTH_CODE = new CCEventType<>("generated_auth_code", ApplicationAuthCodePayload.class);
+
+	/**
+	 * Called when an auth code is redeemed.
+	 */
+	public static final CCEventType<ApplicationAuthCodeRedeemedPayload> REDEEMED_AUTH_CODE = new CCEventType<>("redeemed_auth_code", ApplicationAuthCodeRedeemedPayload.class);
+
+	/**
+	 * Called when an auth code has an error.
+	 */
+	public static final CCEventType<ApplicationAuthCodeErrorPayload> ERRORED_AUTH_CODE = new CCEventType<>("errored_auth_code", ApplicationAuthCodeErrorPayload.class);
 
 	/**
 	 * Called when a player's WebSocket becomes authenticated.
@@ -105,30 +113,11 @@ public class CCEventType<T> {
 
 	/**
 	 * Called when an {@code effect-request} comes in from the player.
-	 * This event filters out duplicates if both the {@code pub} and {@code prv} domains are available.
 	 * Note that the traditional way to receive this information is via {@link CCEffect#onTrigger(PublicEffectPayload, CCPlayer)}.
 	 */
 	public static final CCEventType<PublicEffectPayload> EFFECT_REQUEST = new CCEventType<>("effect_request", PublicEffectPayload.class);
 
-	/**
-	 * Called when an {@code effect-request} on the {@code pub} domain comes in from the player.
-	 * To get notified of only one {@code effect-request} ({@code prv} if available, else {@code pub}), see #EFFECT_REQUEST.
-	 * Note that the traditional way to receive this information is via {@link CCEffect#onTrigger(PublicEffectPayload, CCPlayer)}.
-	 */
-	public static final CCEventType<PublicEffectPayload> PUB_EFFECT_REQUEST = new CCEventType<>("pub_effect_request", PublicEffectPayload.class);
-
-	/**
-	 * Called when an {@code effect-request} on the {@code prv} domain comes in from the player.
-	 * To get notified of only one {@code effect-request} ({@code prv} if available, else {@code pub}), see #EFFECT_REQUEST.
-	 * Note that the traditional way to receive this information is via {@link CCEffect#onTrigger(PublicEffectPayload, CCPlayer)}.
-	 */
-	public static final CCEventType<PublicEffectPayload> PRV_EFFECT_REQUEST = new CCEventType<>("prv_effect_request", PublicEffectPayload.class);
-
 	public static final CCEventType<PublicEffectPayload> EFFECT_FAILURE = new CCEventType<>("effect_request", PublicEffectPayload.class);
-
-	public static final CCEventType<PublicEffectPayload> PUB_EFFECT_FAILURE = new CCEventType<>("pub_effect_request", PublicEffectPayload.class);
-
-	public static final CCEventType<PublicEffectPayload> PRV_EFFECT_FAILURE = new CCEventType<>("prv_effect_request", PublicEffectPayload.class);
 
 	/**
 	 * Called when a connection has attempted to subscribe to some topics.

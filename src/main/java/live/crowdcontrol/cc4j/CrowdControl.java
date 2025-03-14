@@ -41,16 +41,19 @@ public class CrowdControl {
 	protected final @NotNull String gameID;
 	protected final @NotNull String gamePackID;
 	protected final @NotNull String appID;
+	protected final @NotNull String appSecret;
 	protected final @NotNull Path dataFolder;
 	protected @Nullable GamePack gamePack;
 
 	public CrowdControl(@NotNull String gameID,
 						@NotNull String gamePackID,
 						@NotNull String appID,
+						@NotNull String appSecret,
 						@NotNull Path dataFolder) {
 		this.gameID = gameID;
 		this.gamePackID = gamePackID;
 		this.appID = appID;
+		this.appSecret = appSecret;
 		this.dataFolder = dataFolder;
 
 		if (!Files.exists(dataFolder)) {
@@ -89,6 +92,15 @@ public class CrowdControl {
 	 */
 	public @NotNull String getAppID() {
 		return appID;
+	}
+
+	/**
+	 * Gets the API secret of this game's Crowd Control third-party application.
+	 *
+	 * @return appSecret
+	 */
+	public @NotNull String getAppSecret() {
+		return appSecret;
 	}
 
 	/**

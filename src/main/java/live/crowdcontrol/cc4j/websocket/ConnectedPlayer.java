@@ -14,7 +14,6 @@ import live.crowdcontrol.cc4j.util.TokenUtils;
 import live.crowdcontrol.cc4j.websocket.data.*;
 import live.crowdcontrol.cc4j.websocket.http.*;
 import live.crowdcontrol.cc4j.websocket.payload.*;
-import org.intellij.lang.annotations.Subst;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 import org.jetbrains.annotations.ApiStatus;
@@ -25,13 +24,13 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -49,12 +48,12 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 	protected final @NotNull UUID uuid;
 	protected final @NotNull Path tokenPath;
 	protected final @NotNull CrowdControl parent;
-	protected @Nullable String connectionID;
+	protected @Nullable String authCode;
 	protected @Nullable String token;
 	protected @Nullable UserToken userToken;
 	protected @Nullable String gameSessionID;
 	protected @Nullable String lastGameSessionID;
-	protected boolean privateAvailable;
+	protected @Nullable CompletableFuture<Void> pendingAuthCode;
 	protected int sleep = 1;
 
 	static {
@@ -78,11 +77,10 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 		this.eventManager = new EventManager(parent);
 
 		this.eventManager.registerEventConsumer(CCEventType.CONNECTED, handshake -> {
-			send(new SocketRequest("whoami"));
-			subscribe();
+			subscribe(); // since token load may have triggered already
+			regenerateAuthCode();
 		});
 		this.eventManager.registerEventConsumer(CCEventType.DISCONNECTED, data -> {
-			this.connectionID = null;
 			if (this.parent.getPlayer(uuid) != this) return;
 			try {
 				Thread.sleep(sleep * 1000L);
@@ -91,12 +89,37 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 			sleep *= 2;
 			reconnect(); // reconnect!
 		});
-		this.eventManager.registerEventConsumer(CCEventType.IDENTIFIED, payload -> this.connectionID = payload.getConnectionId());
+		this.eventManager.registerEventConsumer(CCEventType.GENERATED_AUTH_CODE, payload -> {
+			this.authCode = payload.code();
+			if (pendingAuthCode != null) {
+				pendingAuthCode.complete(null);
+				pendingAuthCode = null;
+			}
+		});
+		this.eventManager.registerEventConsumer(CCEventType.REDEEMED_AUTH_CODE, payload -> {
+			parent.getHttpUtil().apiPost(
+				"/auth/application/token",
+				AuthApplicationTokenPayload.class,
+				null,
+				new AuthApplicationTokenData(parent.getAppID(), payload.code(), parent.getAppSecret())
+			).handle((tokenPayload, e) -> {
+				if (e != null) {
+					log.warn("Failed to query URL", e);
+					return null;
+				}
+				authCode = null;
+				setToken(tokenPayload.token());
+				return null;
+			});
+		});
+		this.eventManager.registerEventConsumer(CCEventType.ERRORED_AUTH_CODE, payload -> {
+			log.warn("Failed to redeem auth code for reason {}, generating new one", payload.message());
+			send(new SocketRequest(GenerateAuthCodeData.ACTION, new GenerateAuthCodeData(parent.getAppID())));
+		});
 		this.eventManager.registerEventRunnable(CCEventType.AUTHENTICATED, this::subscribe);
 		this.eventManager.registerEventConsumer(CCEventType.SUBSCRIBED, payload -> {
 			assert this.userToken != null : "Subscribed before authenticating";
 			this.subscriptions.addAll(payload.getSuccess());
-			privateAvailable = this.subscriptions.contains("prv/" + this.userToken.getId());
 		});
 		this.eventManager.registerEventConsumer(CCEventType.EFFECT_REQUEST, payload -> this.parent.executeEffect(payload, this));
 		this.eventManager.registerEventConsumer(CCEventType.EFFECT_FAILURE, payload -> parent.cancelByRequestId(payload.getRequestId()));
@@ -115,15 +138,21 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 			log.info("Received message {}", message);
 			SocketEvent event = JACKSON.readValue(message, SocketEvent.class);
 			switch (event.type) {
-				case "whoami":
-					eventManager.dispatch(CCEventType.IDENTIFIED, JACKSON.treeToValue(event.payload, WhoAmIPayload.class));
-					break;
 				case "login-progress":
 					eventManager.dispatch(CCEventType.AUTH_PROGRESS);
 					break;
 				case "login-success":
 					setToken(JACKSON.treeToValue(event.payload, LoginSuccessPayload.class).getToken());
 					saveToken();
+					break;
+				case "application-auth-code":
+					eventManager.dispatch(CCEventType.GENERATED_AUTH_CODE, JACKSON.treeToValue(event.payload, ApplicationAuthCodePayload.class));
+					break;
+				case "application-auth-code-error":
+					eventManager.dispatch(CCEventType.ERRORED_AUTH_CODE, JACKSON.treeToValue(event.payload, ApplicationAuthCodeErrorPayload.class));
+					break;
+				case "application-auth-code-redeemed":
+					eventManager.dispatch(CCEventType.REDEEMED_AUTH_CODE, JACKSON.treeToValue(event.payload, ApplicationAuthCodeRedeemedPayload.class));
 					break;
 				case "subscription-result":
 					SubscriptionResultPayload subscriptionPayload = JACKSON.treeToValue(event.payload, SubscriptionResultPayload.class);
@@ -133,19 +162,15 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 					eventManager.dispatch(CCEventType.SUBSCRIBED, subscriptionPayload);
 					break;
 				case "effect-request":
-					if (!event.domain.equals("pub") && !event.domain.equals("prv")) return;
+					if (!event.domain.equals("pub")) return;
 					PublicEffectPayload requestPayload = JACKSON.treeToValue(event.payload, PublicEffectPayload.class);
 					if (!"game".equals(requestPayload.getEffect().getType())) return;
-					eventManager.dispatch(event.domain.equals("pub") ? CCEventType.PUB_EFFECT_REQUEST : CCEventType.PRV_EFFECT_REQUEST, requestPayload);
-					if (privateAvailable && event.domain.equals("pub")) return;
 					eventManager.dispatch(CCEventType.EFFECT_REQUEST, requestPayload);
 					break;
 				case "effect-failure":
-					if (!event.domain.equals("pub") && !event.domain.equals("prv")) return;
+					if (!event.domain.equals("pub")) return;
 					PublicEffectPayload failurePayload = JACKSON.treeToValue(event.payload, PublicEffectPayload.class);
 					if (!"game".equals(failurePayload.getEffect().getType())) return;
-					eventManager.dispatch(event.domain.equals("pub") ? CCEventType.PUB_EFFECT_FAILURE : CCEventType.PRV_EFFECT_FAILURE, failurePayload);
-					if (privateAvailable && event.domain.equals("pub")) return;
 					eventManager.dispatch(CCEventType.EFFECT_FAILURE, failurePayload);
 					break;
 				case "game-session-start":
@@ -155,7 +180,7 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 					eventManager.dispatch(CCEventType.SESSION_STOPPED, JACKSON.treeToValue(event.payload, GameSessionStopPayload.class));
 					break;
 				// TODO: handle effect menu sync
-				// TODO: handle errors, especially login
+				// TODO: handle errors
 				default:
 					log.debug("Ignoring unknown event {} on domain {}", event.type, event.domain);
 			}
@@ -184,6 +209,7 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 		return canSend() && token != null;
 	}
 
+	// TODO: this needs to be threaded. how does http do it?
 	void send(SocketRequest request) {
 		String message;
 		try {
@@ -230,6 +256,23 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 			CallDataMethod.EFFECT_RESPONSE,
 			Collections.singletonList(response)
 		));
+	}
+
+	@Override
+	public @NotNull CompletableFuture<?> regenerateAuthCode() {
+		if (token != null) return CompletableFuture.completedFuture(null);
+		if (pendingAuthCode != null) {
+			if (pendingAuthCode.isDone()) pendingAuthCode = null;
+			else return pendingAuthCode;
+		}
+		pendingAuthCode = new CompletableFuture<Void>().orTimeout(10, TimeUnit.SECONDS).handle((unused, throwable) -> null);
+		send(new SocketRequest(GenerateAuthCodeData.ACTION, new GenerateAuthCodeData(
+			parent.getAppID(),
+			List.of("session:write", "session:control"),
+			List.of(parent.getGamePackID()),
+			false
+		)));
+		return pendingAuthCode;
 	}
 
 	private List<CCEffectReport> filterReports(boolean force, @NotNull CCEffectReport ... reports) {
@@ -295,16 +338,6 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 			CallDataMethod.EFFECT_REPORT,
 			reportList
 		));
-	}
-
-	@Override
-	public boolean authenticate(@Subst("BCDFGH") @NotNull String code) {
-		if (!canSend()) return false;
-		send(new SocketRequest(
-			"login",
-			new LoginData(parent.getAppID(), code)
-		));
-		return true;
 	}
 
 	@Override
@@ -399,7 +432,7 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 			return;
 
 		try {
-			Files.write(tokenPath, token.getBytes(StandardCharsets.UTF_8));
+			Files.writeString(tokenPath, token);
 		} catch (Exception e) {
 			log.warn("Failed to write user {} token", uuid, e);
 		}
@@ -409,9 +442,8 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 		if (this.token == null || this.userToken == null)
 			return;
 
-		Set<String> subscribeTo = new HashSet<>(Arrays.asList(
-			"pub/" + this.userToken.getId(),
-			"prv/" + this.userToken.getId()
+		Set<String> subscribeTo = new HashSet<>(Set.of(
+			"pub/" + this.userToken.getId()
 		));
 
 		subscribeTo.removeAll(subscriptions);
@@ -429,12 +461,10 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 
 	@Override
 	public @Nullable String getAuthUrl() {
-		if (connectionID == null) return null;
+		if (authCode == null) return null;
 		return String.format(
-			"https://auth.crowdcontrol.live/?connectionID=%s&appID=%s&scope=game.%s",
-			connectionID,
-			parent.getAppID(),
-			parent.getGameID()
+			"https://auth.crowdcontrol.live/code/%s",
+			authCode
 		);
 	}
 
@@ -446,8 +476,8 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 	}
 
 	@Nullable
-	public String getConnectionId() {
-		return connectionID;
+	public String getAuthCode() {
+		return authCode;
 	}
 
 	@Nullable
