@@ -70,7 +70,7 @@ public interface CCPlayer {
 	 * @param response effect response
 	 * @return whether the response could be sent
 	 */
-	boolean sendResponse(@NotNull CCEffectResponse response);
+	CompletableFuture<Boolean> sendResponse(@NotNull CCEffectResponse response);
 
 	/**
 	 * Sends one or more effect reports to the WebSocket.
@@ -78,7 +78,7 @@ public interface CCPlayer {
 	 * @param reports effect reports
 	 * @return whether the report could be sent
 	 */
-	boolean sendReport(@NotNull CCEffectReport @NotNull ... reports);
+	CompletableFuture<Boolean> sendReport(@NotNull CCEffectReport @NotNull ... reports);
 
 	/**
 	 * Attempts to start the streamer's session.

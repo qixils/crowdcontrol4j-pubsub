@@ -10,12 +10,11 @@ import live.crowdcontrol.cc4j.CCPlayer;
 import live.crowdcontrol.cc4j.CrowdControl;
 import live.crowdcontrol.cc4j.util.CloseData;
 import live.crowdcontrol.cc4j.util.EventManager;
+import live.crowdcontrol.cc4j.util.HttpUtil;
 import live.crowdcontrol.cc4j.util.TokenUtils;
 import live.crowdcontrol.cc4j.websocket.data.*;
 import live.crowdcontrol.cc4j.websocket.http.*;
 import live.crowdcontrol.cc4j.websocket.payload.*;
-import org.java_websocket.client.WebSocketClient;
-import org.java_websocket.handshake.ServerHandshake;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -24,12 +23,14 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.net.URI;
+import java.net.http.WebSocket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -38,7 +39,7 @@ import java.util.stream.Stream;
  * A player connected to the server.
  */
 @ApiStatus.Internal
-public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
+public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 	public static final @NotNull ObjectMapper JACKSON;
 	protected static final @NotNull Logger log = LoggerFactory.getLogger(ConnectedPlayer.class);
 	protected final @NotNull Set<String> subscriptions = new HashSet<>();
@@ -48,6 +49,7 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 	protected final @NotNull UUID uuid;
 	protected final @NotNull Path tokenPath;
 	protected final @NotNull CrowdControl parent;
+	protected @Nullable WebSocket ws;
 	protected @Nullable String authCode;
 	protected @Nullable String token;
 	protected @Nullable UserToken userToken;
@@ -69,7 +71,7 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 	// WebSocket Impl
 
 	public ConnectedPlayer(@NotNull UUID uuid, @NotNull CrowdControl parent) {
-		super(URI.create("wss://m9xw37fv0b.execute-api.us-east-1.amazonaws.com/lexikiq"));
+		connect();
 
 		this.parent = parent;
 		this.uuid = uuid;
@@ -77,17 +79,20 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 		this.eventManager = new EventManager(parent);
 
 		this.eventManager.registerEventConsumer(CCEventType.CONNECTED, handshake -> {
+			sleep = 1;
 			subscribe(); // since token load may have triggered already
 			regenerateAuthCode();
 		});
 		this.eventManager.registerEventConsumer(CCEventType.DISCONNECTED, data -> {
+			this.ws = null;
+			// check that the player hasn't just left
 			if (this.parent.getPlayer(uuid) != this) return;
 			try {
 				Thread.sleep(sleep * 1000L);
 			} catch (InterruptedException ignored) {
 			}
 			sleep *= 2;
-			reconnect(); // reconnect!
+			connect(); // reconnect!
 		});
 		this.eventManager.registerEventConsumer(CCEventType.GENERATED_AUTH_CODE, payload -> {
 			this.authCode = payload.code();
@@ -127,24 +132,30 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 		loadToken();
 	}
 
-	@Override
-	public void onOpen(ServerHandshake handshake) {
-		eventManager.dispatch(CCEventType.CONNECTED, handshake);
+	public void connect() {
+		HttpUtil.HTTP_CLIENT.newWebSocketBuilder()
+			.buildAsync(URI.create("wss://m9xw37fv0b.execute-api.us-east-1.amazonaws.com/lexikiq"), this)
+			.thenAccept(ws -> this.ws = ws);
+	}
+
+	public CompletableFuture<?> close() {
+		if (ws == null) return CompletableFuture.completedFuture(null);
+		return ws.sendClose(WebSocket.NORMAL_CLOSURE, "");
 	}
 
 	@Override
-	public void onMessage(String message) {
+	public void onOpen(WebSocket ws) {
+		eventManager.dispatch(CCEventType.CONNECTED);
+		ws.request(Long.MAX_VALUE);
+	}
+
+	@Override
+	public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
 		try {
+			String message = data.toString();
 			log.info("Received message {}", message);
 			SocketEvent event = JACKSON.readValue(message, SocketEvent.class);
 			switch (event.type) {
-				case "login-progress":
-					eventManager.dispatch(CCEventType.AUTH_PROGRESS);
-					break;
-				case "login-success":
-					setToken(JACKSON.treeToValue(event.payload, LoginSuccessPayload.class).getToken());
-					saveToken();
-					break;
 				case "application-auth-code":
 					eventManager.dispatch(CCEventType.GENERATED_AUTH_CODE, JACKSON.treeToValue(event.payload, ApplicationAuthCodePayload.class));
 					break;
@@ -162,15 +173,15 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 					eventManager.dispatch(CCEventType.SUBSCRIBED, subscriptionPayload);
 					break;
 				case "effect-request":
-					if (!event.domain.equals("pub")) return;
+					if (!event.domain.equals("pub")) return null;
 					PublicEffectPayload requestPayload = JACKSON.treeToValue(event.payload, PublicEffectPayload.class);
-					if (!"game".equals(requestPayload.getEffect().getType())) return;
+					if (!"game".equals(requestPayload.getEffect().getType())) return null;
 					eventManager.dispatch(CCEventType.EFFECT_REQUEST, requestPayload);
 					break;
 				case "effect-failure":
-					if (!event.domain.equals("pub")) return;
+					if (!event.domain.equals("pub")) return null;
 					PublicEffectPayload failurePayload = JACKSON.treeToValue(event.payload, PublicEffectPayload.class);
-					if (!"game".equals(failurePayload.getEffect().getType())) return;
+					if (!"game".equals(failurePayload.getEffect().getType())) return null;
 					eventManager.dispatch(CCEventType.EFFECT_FAILURE, failurePayload);
 					break;
 				case "game-session-start":
@@ -185,24 +196,26 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 					log.debug("Ignoring unknown event {} on domain {}", event.type, event.domain);
 			}
 		} catch (Exception e) {
-			log.warn("Failed to handle incoming message {}", message, e);
+			log.warn("Failed to handle incoming message {}", data, e);
 		}
+		return null;
 	}
 
 	@Override
-	public void onClose(int code, String reason, boolean remote) {
-		eventManager.dispatch(CCEventType.DISCONNECTED, new CloseData(code, reason, remote));
+	public CompletionStage<?> onClose(WebSocket webSocket, int statusCode, String reason) {
+		eventManager.dispatch(CCEventType.DISCONNECTED, new CloseData(statusCode, reason, true));
+		return null;
 	}
 
 	@Override
-	public void onError(Exception ex) {
-		log.error("An unknown WebSocket error has occurred", ex);
+	public void onError(WebSocket webSocket, Throwable error) {
+		log.error("An unknown WebSocket error has occurred", error);
 	}
 
 	// Semi Boilerplate
 
 	public boolean canSend() {
-		return isOpen();
+		return ws != null && !ws.isOutputClosed();
 	}
 
 	public boolean canSendRPC() {
@@ -210,47 +223,46 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 	}
 
 	// TODO: this needs to be threaded. how does http do it?
-	void send(SocketRequest request) {
+	CompletableFuture<WebSocket> send(SocketRequest request) {
 		String message;
 		try {
 			message = JACKSON.writeValueAsString(request);
 		} catch (JsonProcessingException e) {
 			log.warn("Failed to encode message {}", request, e);
-			return;
+			return null;
 		}
 
 		if (!canSend()) {
 			log.warn("Attempted to send message {} before connecting", message);
-			return;
+			return null;
 		}
 
-		try {
-			send(message);
-			log.info("Sent message {}", message);
-		} catch (Exception e) {
-			log.warn("Failed to send message {}", message, e);
-		}
+		assert ws != null;
+
+		return ws.sendText(message, true).whenComplete(($, e) -> {
+			if (e != null) log.warn("Failed to send message {}", message, e);
+			else log.info("Sent message {}", message);
+		});
 	}
 
-	public boolean sendRPC(CallData<?> call) {
-		if (!canSendRPC()) return false;
+	public CompletableFuture<Boolean> sendRPC(CallData<?> call) {
+		if (!canSendRPC()) return CompletableFuture.completedFuture(false);
 		assert token != null;
 
-		send(new SocketRequest(
+		return send(new SocketRequest(
 			"rpc",
 			new RemoteProcedureCallData(
 				token,
 				call
 			)
-		));
-
-		return true;
+		)).handle(($, e) -> e == null);
 	}
 
-	public boolean sendResponse(@NotNull CCEffectResponse response) {
+	@Override
+	public CompletableFuture<Boolean> sendResponse(@NotNull CCEffectResponse response) {
 		//noinspection ConstantValue
-		if (response == null) return false;
-		if (response.getStatus() == ResponseStatus.DELAY_ESTIMATED) return false; // unused
+		if (response == null) return CompletableFuture.completedFuture(false);
+		if (response.getStatus() == ResponseStatus.DELAY_ESTIMATED) return CompletableFuture.completedFuture(false); // unused
 		eventManager.dispatch(CCEventType.EFFECT_RESPONSE, response);
 		return sendRPC(new CallData<>(
 			CallDataMethod.EFFECT_RESPONSE,
@@ -328,11 +340,11 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 	}
 
 	@Override
-	public boolean sendReport(@NotNull CCEffectReport @NotNull ... reports) {
-		if (!canSendRPC()) return false; // let's not update reports if we can't!!!
+	public CompletableFuture<Boolean> sendReport(@NotNull CCEffectReport @NotNull ... reports) {
+		if (!canSendRPC()) return CompletableFuture.completedFuture(false); // let's not update reports if we can't!!!
 
 		List<CCEffectReport> reportList = filterReports(false, reports);
-		if (reportList.isEmpty()) return true; // really filtered down to nothing! so, it succeeded, i guess?
+		if (reportList.isEmpty()) return CompletableFuture.completedFuture(false); // really filtered down to nothing! so, it succeeded, i guess?
 
 		return sendRPC(new CallData<>(
 			CallDataMethod.EFFECT_REPORT,
@@ -402,6 +414,7 @@ public class ConnectedPlayer extends WebSocketClient implements CCPlayer {
 				log.warn("User {}'s auth token has expired", uuid);
 				this.userToken = null;
 				eventManager.dispatch(CCEventType.AUTH_EXPIRED);
+				eventManager.dispatch(CCEventType.UNAUTHENTICATED);
 				return false;
 			}
 		} catch (Exception e) {

@@ -214,7 +214,7 @@ public class CrowdControl {
 	public boolean removePlayer(@NotNull UUID playerId) {
 		ConnectedPlayer existing = players.remove(playerId);
 		if (existing == null) return false;
-		// TODO: refund effects
+		// TODO: refund effects (actually, this should be done by stopSession on the backend?)
 		existing.stopSession();
 		existing.close();
 		return true;

@@ -11,6 +11,7 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -19,6 +20,7 @@ import static live.crowdcontrol.cc4j.websocket.ConnectedPlayer.JACKSON;
 
 public class HttpUtil {
 	public static final @NotNull URL OPEN_API_URL;
+	public static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
 	private static final @NotNull TypeReference<String> STRING_TYPE = new TypeReference<String>() { };
 	private static final Logger log = LoggerFactory.getLogger(HttpUtil.class);
 
@@ -44,14 +46,14 @@ public class HttpUtil {
 				con = (HttpURLConnection) url.openConnection();
 				con.setRequestMethod(method);
 				con.setRequestProperty("User-Agent", "crowdcontrol4j");
-				con.setRequestProperty("Accept", "application/json");
+				con.setRequestProperty("Content-Type", "application/json");
 				if (token != null) {
 					con.setRequestProperty("Authorization", "cc-auth-token " + token);
 				}
 				con.setConnectTimeout(10000);
 				con.setReadTimeout(10000);
 				if (data != null) {
-					con.setRequestProperty("Content-Type", "application/json");
+					con.setRequestProperty("Accept", "application/json");
 					con.setDoOutput(true);
 					try (OutputStream os = con.getOutputStream()) {
 						log.info("Outputting {}", JACKSON.writeValueAsString(data));

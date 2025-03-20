@@ -6,7 +6,6 @@ import live.crowdcontrol.cc4j.websocket.data.CCEffectResponse;
 import live.crowdcontrol.cc4j.websocket.http.GameSessionStartPayload;
 import live.crowdcontrol.cc4j.websocket.http.GameSessionStopPayload;
 import live.crowdcontrol.cc4j.websocket.payload.*;
-import org.java_websocket.handshake.ServerHandshake;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
@@ -61,7 +60,7 @@ public class CCEventType<T> {
 	 * Called when a player's WebSocket initially establishes its connection.
 	 * The connectionID will be unavailable at this point.
 	 */
-	public static final CCEventType<ServerHandshake> CONNECTED = new CCEventType<>("connected", ServerHandshake.class);
+	public static final CCEventType<Void> CONNECTED = ofVoid("connected");
 
 	/**
 	 * Called when a player's WebSocket is closed.
@@ -88,16 +87,6 @@ public class CCEventType<T> {
 	 * The connectionID may be unavailable at this point.
 	 */
 	public static final CCEventType<Void> AUTHENTICATED = ofVoid("authenticated");
-
-	/**
-	 * Called when a player signed in to their Crowd Control account
-	 * but has not yet authorized the mod to use their account.
-	 * The user's token will be unavailable at this point.
-	 * The connectionID may be unavailable at this point.
-	 * <p>
-	 * To continue authorization, you will need to call {@link CCPlayer#authenticate(String)}.
-	 */
-	public static final CCEventType<Void> AUTH_PROGRESS = ofVoid("auth_progress");
 
 	/**
 	 * Called when a player's authentication token expires.

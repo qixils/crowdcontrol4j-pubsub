@@ -39,7 +39,9 @@ public final class CloseData {
 	 * Returns whether the closing of the connection was initiated by the remote host.
 	 *
 	 * @return remote cause
+	 * @deprecated no longer available
 	 */
+	@Deprecated
 	public boolean isRemote() {
 		return remote;
 	}
