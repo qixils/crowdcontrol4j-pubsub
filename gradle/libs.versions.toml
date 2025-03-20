@@ -3,16 +3,16 @@
 
 [versions]
 junit-jupiter = "5.11.2"
-websocket = "1.5.7"
 jackson = "2.18.0"
 annotations = "26.0.1"
 geantyref = "2.0.0"
+slf4j = "2.0.17"
 
 [libraries]
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
-websocket = { module = "org.java-websocket:Java-WebSocket", version.ref = "websocket" }
 jackson-core = { module = "com.fasterxml.jackson.core:jackson-core", version.ref="jackson" }
 jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref="jackson" }
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref="jackson" }
 annotations = { module = "org.jetbrains:annotations", version.ref = "annotations" }
 geantyref = { module = "io.leangen.geantyref:geantyref", version.ref = "geantyref" }
+slf4j = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }

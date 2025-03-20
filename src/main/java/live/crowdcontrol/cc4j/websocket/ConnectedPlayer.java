@@ -32,6 +32,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -42,6 +43,7 @@ import java.util.stream.Stream;
 public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 	public static final @NotNull ObjectMapper JACKSON;
 	protected static final @NotNull Logger log = LoggerFactory.getLogger(ConnectedPlayer.class);
+	protected final ReentrantLock lock = new ReentrantLock();
 	protected final @NotNull Set<String> subscriptions = new HashSet<>();
 	protected final Map<String, Boolean> visible = new HashMap<>();
 	protected final Map<String, Boolean> available = new HashMap<>();
@@ -71,14 +73,13 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 	// WebSocket Impl
 
 	public ConnectedPlayer(@NotNull UUID uuid, @NotNull CrowdControl parent) {
-		connect();
-
 		this.parent = parent;
 		this.uuid = uuid;
 		this.tokenPath = parent.getDataFolder().resolve(uuid + ".token");
 		this.eventManager = new EventManager(parent);
 
 		this.eventManager.registerEventConsumer(CCEventType.CONNECTED, handshake -> {
+			log.info("Connected event");
 			sleep = 1;
 			subscribe(); // since token load may have triggered already
 			regenerateAuthCode();
@@ -114,6 +115,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 				}
 				authCode = null;
 				setToken(tokenPayload.token());
+				saveToken();
 				return null;
 			});
 		});
@@ -133,8 +135,9 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 	}
 
 	public void connect() {
+		log.info("Connecting WebSocket");
 		HttpUtil.HTTP_CLIENT.newWebSocketBuilder()
-			.buildAsync(URI.create("wss://m9xw37fv0b.execute-api.us-east-1.amazonaws.com/lexikiq"), this)
+			.buildAsync(URI.create("wss://svjjr5a5ph.execute-api.us-east-1.amazonaws.com/lexikiq"), this)
 			.thenAccept(ws -> this.ws = ws);
 	}
 
@@ -145,6 +148,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 
 	@Override
 	public void onOpen(WebSocket ws) {
+		log.info("Emitting connected event");
 		eventManager.dispatch(CCEventType.CONNECTED);
 		ws.request(Long.MAX_VALUE);
 	}
@@ -168,8 +172,11 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 				case "subscription-result":
 					SubscriptionResultPayload subscriptionPayload = JACKSON.treeToValue(event.payload, SubscriptionResultPayload.class);
 					if (subscriptionPayload == null) break;
-					subscriptionPayload.getSuccess().removeIf(Objects::isNull);
-					subscriptionPayload.getFailure().removeIf(Objects::isNull);
+					//noinspection ConstantValue
+					subscriptionPayload = new SubscriptionResultPayload(
+						subscriptionPayload.getSuccess().stream().filter(Objects::nonNull).collect(Collectors.toSet()),
+						subscriptionPayload.getFailure().stream().filter(Objects::nonNull).collect(Collectors.toSet())
+					);
 					eventManager.dispatch(CCEventType.SUBSCRIBED, subscriptionPayload);
 					break;
 				case "effect-request":
@@ -222,25 +229,36 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 		return canSend() && token != null;
 	}
 
-	// TODO: this needs to be threaded. how does http do it?
-	CompletableFuture<WebSocket> send(SocketRequest request) {
-		String message;
-		try {
-			message = JACKSON.writeValueAsString(request);
-		} catch (JsonProcessingException e) {
-			log.warn("Failed to encode message {}", request, e);
-			return null;
-		}
+	@NotNull
+	private CompletableFuture<String> send(SocketRequest request) {
+		return CompletableFuture.supplyAsync(() -> {
+			String message;
+			try {
+				message = JACKSON.writeValueAsString(request);
+			} catch (JsonProcessingException e) {
+				throw new IllegalArgumentException("Could not encode message", e);
+			}
 
-		if (!canSend()) {
-			log.warn("Attempted to send message {} before connecting", message);
-			return null;
-		}
+			lock.lock();
+			try {
+				if (!canSend()) {
+					throw new IllegalStateException("Attempted to send message " + message + " before connecting");
+				}
 
-		assert ws != null;
+				assert ws != null;
 
-		return ws.sendText(message, true).whenComplete(($, e) -> {
-			if (e != null) log.warn("Failed to send message {}", message, e);
+				return ws
+					.sendText(message, true)
+					.handleAsync(($, e) -> {
+						if (e != null) throw new IllegalStateException("WebSocket failed to send message " + message, e);
+						return message;
+					})
+					.join(); // this ensures the lock works as expected!
+			} finally {
+				lock.unlock();
+			}
+		}).whenComplete((message, e) -> {
+			if (e != null) log.warn("Failed to send message", e);
 			else log.info("Sent message {}", message);
 		});
 	}

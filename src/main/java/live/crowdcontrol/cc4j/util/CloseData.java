@@ -1,6 +1,5 @@
 package live.crowdcontrol.cc4j.util;
 
-import org.java_websocket.framing.CloseFrame;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -18,8 +17,6 @@ public final class CloseData {
 	}
 
 	/**
-	 * The codes can be looked up here: {@link CloseFrame}
-	 *
 	 * @return close frame code
 	 */
 	public int getCode() {
