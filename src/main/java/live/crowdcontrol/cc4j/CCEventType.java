@@ -10,6 +10,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 
+// TODO: completely refactor this to be a standalone object
 public class CCEventType<T> {
 	private final @NotNull String listenerId;
 	private final @NotNull TypeToken<T> typeToken;
@@ -106,7 +107,7 @@ public class CCEventType<T> {
 	 */
 	public static final CCEventType<PublicEffectPayload> EFFECT_REQUEST = new CCEventType<>("effect_request", PublicEffectPayload.class);
 
-	public static final CCEventType<PublicEffectPayload> EFFECT_FAILURE = new CCEventType<>("effect_request", PublicEffectPayload.class);
+	public static final CCEventType<PublicEffectPayload> EFFECT_FAILURE = new CCEventType<>("effect_failure", PublicEffectPayload.class);
 
 	/**
 	 * Called when a connection has attempted to subscribe to some topics.

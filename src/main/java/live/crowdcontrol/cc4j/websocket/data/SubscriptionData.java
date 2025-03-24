@@ -19,7 +19,7 @@ public class SubscriptionData {
 
 	@RegExp
 	public static final @NotNull String TOPIC_PATTERN = "^(?<domain>overlay|session|prv|pub|app|ext|whisper)(?:/(?<scope>\\*|ccuid-[0-7][0-9a-hjkmnp-tv-z]{25}))?/(?<target>\\*|ccuid-[0-7][0-9a-hjkmnp-tv-z]{25})$";
-	private static final @NotNull Logger log = LoggerFactory.getLogger(SubscriptionData.class);
+	private static final @NotNull Logger log = LoggerFactory.getLogger("CrowdControl/SubscriptionData");
 
 	private final @NotNull Set<@NotNull String> topics;
 	private final @Nullable String token;

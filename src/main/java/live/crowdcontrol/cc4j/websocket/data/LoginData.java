@@ -16,7 +16,7 @@ public class LoginData {
 
 	@RegExp
 	public static final @NotNull String CODE_PATTERN = "^[BCDFGHJKLMNPQRTW6789]{6}$";
-	private static final @NotNull Logger log = LoggerFactory.getLogger(LoginData.class);
+	private static final @NotNull Logger log = LoggerFactory.getLogger("CrowdControl/LoginData");
 
 	private final @NotNull String appID;
 	@Pattern(CODE_PATTERN) @Subst("BCDFGH")

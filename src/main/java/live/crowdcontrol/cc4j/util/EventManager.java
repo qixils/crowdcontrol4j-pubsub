@@ -19,7 +19,7 @@ import java.util.stream.Stream;
  * Manages the dispatching and invoking of events.
  */
 public final class EventManager {
-	private static final @NotNull Logger log = LoggerFactory.getLogger(EventManager.class);
+	private static final @NotNull Logger log = LoggerFactory.getLogger("CrowdControl/EventManager");
 	public static int CATCH_UP_DEFAULT = -1;
 	public static int RECORD_LIMIT = 100;
 	private final @NotNull List<EventRecord<?>> records = new ArrayList<>(RECORD_LIMIT);

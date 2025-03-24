@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import java.io.BufferedReader;
 import java.net.URI;
 import java.net.http.WebSocket;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -31,6 +32,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -42,7 +44,7 @@ import java.util.stream.Stream;
 @ApiStatus.Internal
 public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 	public static final @NotNull ObjectMapper JACKSON;
-	protected static final @NotNull Logger log = LoggerFactory.getLogger(ConnectedPlayer.class);
+	protected static final @NotNull Logger log = LoggerFactory.getLogger("CrowdControl/ConnectedPlayer");
 	protected final ReentrantLock lock = new ReentrantLock();
 	protected final @NotNull Set<String> subscriptions = new HashSet<>();
 	protected final Map<String, Boolean> visible = new HashMap<>();
@@ -59,6 +61,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 	protected @Nullable String lastGameSessionID;
 	protected @Nullable CompletableFuture<Void> pendingAuthCode;
 	protected int sleep = 1;
+	protected ScheduledFuture<?> keepAlive = null;
 
 	static {
 		ObjectMapper mapper = new ObjectMapper();
@@ -81,8 +84,22 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 		this.eventManager.registerEventConsumer(CCEventType.CONNECTED, handshake -> {
 			log.info("Connected event");
 			sleep = 1;
+			// Sleep for a bit to workaround issue where socket appears to still be opening
+			long wait = 1L;
+			while (!canSendRPC() && wait <= 10) {
+				try {
+					Thread.sleep(wait * 500L);
+				} catch (InterruptedException ignored) {
+				} finally {
+					wait *= 2;
+				}
+			}
+			if (!canSendRPC()) {
+				log.warn("Socket is not opening, session start may fail");
+			}
 			subscribe(); // since token load may have triggered already
 			regenerateAuthCode();
+			resetKeepAlive();
 		});
 		this.eventManager.registerEventConsumer(CCEventType.DISCONNECTED, data -> {
 			this.ws = null;
@@ -142,8 +159,33 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 	}
 
 	public CompletableFuture<?> close() {
-		if (ws == null) return CompletableFuture.completedFuture(null);
+		if (!canSend()) return CompletableFuture.completedFuture(null);
+		assert ws != null;
 		return ws.sendClose(WebSocket.NORMAL_CLOSURE, "");
+	}
+
+	public void clearKeepAlive() {
+		if (keepAlive == null) return;
+		keepAlive.cancel(false);
+		keepAlive = null;
+	}
+
+	public void resetKeepAlive() {
+		if (!canSend()) return;
+		assert ws != null;
+		clearKeepAlive();
+		keepAlive = parent.getTimedEffectPool().schedule(() -> {
+			log.info("KeepAlive failed, reconnecting");
+			clearKeepAlive();
+			close();
+		}, 15, TimeUnit.SECONDS);
+		ws.sendPing(ByteBuffer.allocate(0));
+	}
+
+	@Override
+	public CompletionStage<?> onPong(WebSocket webSocket, ByteBuffer message) {
+		resetKeepAlive();
+		return null;
 	}
 
 	@Override
@@ -157,7 +199,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 	public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
 		try {
 			String message = data.toString();
-			log.info("Received message {}", message);
+//			log.info("Received message {}", message);
 			SocketEvent event = JACKSON.readValue(message, SocketEvent.class);
 			switch (event.type) {
 				case "application-auth-code":
@@ -242,7 +284,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 			lock.lock();
 			try {
 				if (!canSend()) {
-					throw new IllegalStateException("Attempted to send message " + message + " before connecting");
+					throw new IllegalStateException("Attempted to send message before connecting " + message.substring(0, 20));
 				}
 
 				assert ws != null;
@@ -250,7 +292,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 				return ws
 					.sendText(message, true)
 					.handleAsync(($, e) -> {
-						if (e != null) throw new IllegalStateException("WebSocket failed to send message " + message, e);
+						if (e != null) throw new IllegalStateException("WebSocket failed to send message " + message.substring(0, 20), e);
 						return message;
 					})
 					.join(); // this ensures the lock works as expected!
@@ -259,7 +301,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 			}
 		}).whenComplete((message, e) -> {
 			if (e != null) log.warn("Failed to send message", e);
-			else log.info("Sent message {}", message);
+//			else log.info("Sent message {}", message);
 		});
 	}
 
@@ -470,8 +512,10 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 	}
 
 	protected void subscribe() {
-		if (this.token == null || this.userToken == null)
+		if (!canSendRPC())
 			return;
+
+		assert this.userToken != null;
 
 		Set<String> subscribeTo = new HashSet<>(Set.of(
 			"pub/" + this.userToken.getId()

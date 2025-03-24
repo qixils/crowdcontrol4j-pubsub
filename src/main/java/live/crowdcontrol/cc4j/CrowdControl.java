@@ -29,7 +29,7 @@ public class CrowdControl {
 	 * Amount of time in seconds that effects are allowed to execute for.
 	 */
 	public static final int QUEUE_DURATION = 60;
-	private static final @NotNull Logger log = LoggerFactory.getLogger(CrowdControl.class);
+	private static final @NotNull Logger log = LoggerFactory.getLogger("CrowdControl/Manager");
 	protected final @NotNull Map<String, Supplier<CCEffect>> effects = new HashMap<>();
 	protected final @NotNull Map<UUID, ConnectedPlayer> players = new HashMap<>();
 	final @NotNull Map<UUID, ActiveEffect> pendingRequests = new HashMap<>();
@@ -370,8 +370,7 @@ public class CrowdControl {
 
 		source.sendResponse(new CCInstantEffectResponse(response.getRequestId(), ResponseStatus.SUCCESS, response.getMessage()));
 
-		if (!(response instanceof CCTimedEffectResponse)) return;
-		CCTimedEffectResponse timedResponse = (CCTimedEffectResponse) response;
+		if (!(response instanceof CCTimedEffectResponse timedResponse)) return;
 
 		// Start timed effect!
 		timedRequests.put(response.getRequestId(), effect);
@@ -410,7 +409,6 @@ public class CrowdControl {
 		ActiveEffect effect = pendingRequests.remove(requestId);
 		if (effect != null) {
 			cancel(effect, "Effect cancelled before execution");
-			return;
 		}
 
 		effect = timedRequests.get(requestId);

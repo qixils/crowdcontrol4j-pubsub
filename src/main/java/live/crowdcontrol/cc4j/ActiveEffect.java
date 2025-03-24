@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
  * Util denoting relevant information about pending effects and active timed effects.
  */
 final class ActiveEffect {
-	private static final Logger log = LoggerFactory.getLogger(ActiveEffect.class);
+	private static final Logger log = LoggerFactory.getLogger("CrowdControl/ActiveEffect");
 	private final @NotNull CrowdControl cc;
 	private final @NotNull CCEffect effect;
 	private final @NotNull PublicEffectPayload payload;
