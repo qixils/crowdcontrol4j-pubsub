@@ -340,7 +340,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 		pendingAuthCode = new CompletableFuture<Void>().orTimeout(10, TimeUnit.SECONDS).handle((unused, throwable) -> null);
 		send(new SocketRequest(GenerateAuthCodeData.ACTION, new GenerateAuthCodeData(
 			parent.getAppID(),
-			List.of("session:write", "session:control"),
+			List.of("profile:read", "session:write", "session:control"),
 			List.of(parent.getGamePackID()),
 			false
 		)));
