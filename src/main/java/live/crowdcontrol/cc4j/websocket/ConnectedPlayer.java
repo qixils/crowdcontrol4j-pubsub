@@ -82,7 +82,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 		this.eventManager = new EventManager(parent);
 
 		this.eventManager.registerEventConsumer(CCEventType.CONNECTED, handshake -> {
-			log.info("Connected event");
+//			log.info("Connected event");
 			sleep = 1;
 			// Sleep for a bit to workaround issue where socket appears to still be opening
 			long wait = 1L;
@@ -154,7 +154,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 	public void connect() {
 		log.info("Connecting WebSocket");
 		HttpUtil.HTTP_CLIENT.newWebSocketBuilder()
-			.buildAsync(URI.create("wss://svjjr5a5ph.execute-api.us-east-1.amazonaws.com/lexikiq"), this)
+			.buildAsync(URI.create("wss://pubsub.crowdcontrol.live/"), this)
 			.thenAccept(ws -> this.ws = ws);
 	}
 
@@ -190,7 +190,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 
 	@Override
 	public void onOpen(WebSocket ws) {
-		log.info("Emitting connected event");
+//		log.info("Emitting connected event");
 		eventManager.dispatch(CCEventType.CONNECTED);
 		ws.request(Long.MAX_VALUE);
 	}

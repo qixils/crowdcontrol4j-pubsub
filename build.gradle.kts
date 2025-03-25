@@ -6,13 +6,14 @@
  */
 
 // name is set in settings.gradle.kts lol
-group = "live.crowdcontrol.cc4j"
-version = "1.0.0-SNAPSHOT"
+group = "dev.qixils.cc4j"
+version = "1.0.0"
 
 plugins {
     // Apply the java-library plugin for API and implementation separation.
     `java-library`
     `maven-publish`
+    signing
 }
 
 repositories {
@@ -46,7 +47,8 @@ java {
     }
     sourceCompatibility = javaVersion
     targetCompatibility = javaVersion
-//    withSourcesJar()
+    withJavadocJar()
+    withSourcesJar()
 }
 
 tasks.named<Test>("test") {
@@ -56,34 +58,47 @@ tasks.named<Test>("test") {
 
 publishing {
     publications {
-        create<MavenPublication>("maven") {
+        create<MavenPublication>("mavenJava") {
             from(components["java"])
 
             pom {
                 name = "crowdcontrol4j pubsub"
-                description = "An implementation of the Crowd Control PubSub WebSocket protocol for Java 8+"
+                description = "An implementation of the Crowd Control PubSub WebSocket protocol for Java 21+"
                 url = "http://github.com/qixils/crowdcontrol4j-pubsub"
-                /*
                 licenses {
                     license {
-                        name = "The Apache License, Version 2.0"
-                        url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
+                        name = "Functional Source License, Version 1.1, Apache 2.0 Future License"
+                        url = "https://github.com/qixils/crowdcontrol4j-pubsub/blob/main/LICENSE.md"
                     }
                 }
                 developers {
                     developer {
-                        id = "johnd"
-                        name = "John Doe"
-                        email = "john.doe@example.com"
+                        id = "qixils"
+                        name = "Lexi Larkin"
+                        email = "lexi+git@qixils.dev"
                     }
                 }
                 scm {
-                    connection = "scm:git:git://example.com/my-library.git"
-                    developerConnection = "scm:git:ssh://example.com/my-library.git"
-                    url = "http://example.com/my-library/"
+                    connection = "scm:git:git://github.com/qixils/crowdcontrol4j-pubsub.git"
+                    developerConnection = "scm:git:ssh://github.com/qixils/crowdcontrol4j-pubsub.git"
+                    url = "http://github.com/qixils/crowdcontrol4j-pubsub/"
                 }
-                */
             }
         }
     }
+    repositories {
+        maven {
+            name = "OSSRH"
+            url = uri(if (version.toString().contains("SNAPSHOT")) "https://s01.oss.sonatype.org/content/repositories/snapshots/"
+            else "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
+            credentials {
+                username = findProperty("ossrhUsername") as String?
+                password = findProperty("ossrhPassword") as String?
+            }
+        }
+    }
+}
+
+signing {
+    sign(publishing.publications["mavenJava"])
 }

@@ -20,8 +20,8 @@ import java.util.stream.Stream;
  */
 public final class EventManager {
 	private static final @NotNull Logger log = LoggerFactory.getLogger("CrowdControl/EventManager");
-	public static int CATCH_UP_DEFAULT = -1;
-	public static int RECORD_LIMIT = 100;
+	public static final int CATCH_UP_DEFAULT = -1;
+	public static final int RECORD_LIMIT = 100;
 	private final @NotNull List<EventRecord<?>> records = new ArrayList<>(RECORD_LIMIT);
 	private final @NotNull Map<CCEventType<?>, List<Consumer<?>>> listeners = new HashMap<>();
 	private final @NotNull CrowdControl parent;
@@ -95,7 +95,7 @@ public final class EventManager {
 	 * <p>
 	 * {@code catchUpPeriod} determines the time in seconds in which to look for recently sent events
 	 * to catch the listener up on events it just missed.
-	 * Set to 0 to disable, or -1 to fetch all records (within the {@value RECORD_LIMIT} most recent).
+	 * Set to 0 to disable, or -1 to fetch all records (within the {@value #RECORD_LIMIT} most recent).
 	 *
 	 * @param event the type of event to register for
 	 * @param listener the function to call as necessary
@@ -124,7 +124,7 @@ public final class EventManager {
 	 * <p>
 	 * {@code catchUpPeriod} determines the time in seconds in which to look for recently sent events
 	 * to catch the listener up on events it just missed.
-	 * Set to 0 to disable, or -1 to fetch all records (within the {@value RECORD_LIMIT} most recent).
+	 * Set to 0 to disable, or -1 to fetch all records (within the {@value #RECORD_LIMIT} most recent).
 	 *
 	 * @param event the type of event to register for
 	 * @param listener the function to call as necessary
