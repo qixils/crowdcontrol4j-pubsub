@@ -86,7 +86,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 			sleep = 1;
 			// Sleep for a bit to workaround issue where socket appears to still be opening
 			long wait = 1L;
-			while (!canSendRPC() && wait <= 10) {
+			while (!canSend() && wait <= 10) {
 				try {
 					Thread.sleep(wait * 500L);
 				} catch (InterruptedException ignored) {
@@ -94,7 +94,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 					wait *= 2;
 				}
 			}
-			if (!canSendRPC()) {
+			if (!canSend()) {
 				log.warn("Socket is not opening, session start may fail");
 			}
 			subscribe(); // since token load may have triggered already
