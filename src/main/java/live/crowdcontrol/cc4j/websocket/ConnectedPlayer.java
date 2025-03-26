@@ -53,6 +53,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 	protected final @NotNull UUID uuid;
 	protected final @NotNull Path tokenPath;
 	protected final @NotNull CrowdControl parent;
+	protected @NotNull StringBuilder pendingText = new StringBuilder();
 	protected @Nullable WebSocket ws;
 	protected @Nullable String authCode;
 	protected @Nullable String token;
@@ -197,8 +198,11 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 
 	@Override
 	public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
+		pendingText.append(data);
+		if (!last) return null;
 		try {
-			String message = data.toString();
+			String message = pendingText.toString();
+			pendingText = new StringBuilder();
 //			log.info("Received message {}", message);
 			SocketEvent event = JACKSON.readValue(message, SocketEvent.class);
 			switch (event.type) {
