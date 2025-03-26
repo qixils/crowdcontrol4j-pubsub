@@ -55,6 +55,15 @@ final class ActiveEffect {
 		return startedAt != null || timeRemaining > -1;
 	}
 
+	public boolean isPaused() {
+		// startedAt gets updated every time setCompleter is invoked, which allows us to track if it's running or not
+		return startedAt == null;
+	}
+
+	public boolean isCompleted() {
+		return timeRemaining <= 0;
+	}
+
 	public @Nullable Future<?> getCompleter() {
 		return completer;
 	}
@@ -97,7 +106,8 @@ final class ActiveEffect {
 	}
 
 	public void pause() {
-		if (startedAt == null) return;
+		if (isCompleted()) return;
+		if (isPaused()) return;
 
 		this.timeRemaining = completer != null
 			? Math.max(0, completer.getDelay(TimeUnit.MILLISECONDS))
@@ -119,7 +129,8 @@ final class ActiveEffect {
 	}
 
 	public void resume() {
-		if (timeRemaining <= 0) return;
+		if (isCompleted()) return;
+		if (!isPaused()) return;
 
 		scheduleCompleter(timeRemaining);
 
