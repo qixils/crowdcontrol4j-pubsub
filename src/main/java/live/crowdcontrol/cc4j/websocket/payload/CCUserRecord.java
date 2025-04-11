@@ -74,4 +74,15 @@ public class CCUserRecord implements IUserRecord {
 	public @NotNull String getImage() {
 		return image;
 	}
+
+	@Override
+	public String toString() {
+		return "CCUserRecord{" +
+			"ccUID='" + ccUID + '\'' +
+			", name='" + name + '\'' +
+			", profile=" + profile +
+			", originID='" + originID + '\'' +
+			", image='" + image + '\'' +
+			'}';
+	}
 }

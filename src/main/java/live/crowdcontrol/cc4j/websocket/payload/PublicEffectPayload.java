@@ -127,4 +127,19 @@ public class PublicEffectPayload {
 	public long getLocalTimestamp() {
 		return localTimestamp;
 	}
+
+	@Override
+	public String toString() {
+		return "PublicEffectPayload{" +
+			"requestID=" + requestID +
+			", timestamp=" + timestamp +
+			", effect=" + effect +
+			", target=" + target +
+			", origin=" + origin +
+			", requester=" + requester +
+			", anonymous=" + anonymous +
+			", quantity=" + quantity +
+			", localTimestamp=" + localTimestamp +
+			'}';
+	}
 }

@@ -204,4 +204,24 @@ public class CCBaseEffectDescription {
 	public int getDuration() {
 		return duration;
 	}
+
+	@Override
+	public String toString() {
+		return "CCBaseEffectDescription{" +
+			"name=" + name +
+			", image='" + image + '\'' +
+			", note='" + note + '\'' +
+			", description='" + description + '\'' +
+			", disabled=" + disabled +
+			", isNew=" + isNew +
+			", inactive=" + inactive +
+			", admin=" + admin +
+			", hidden=" + hidden +
+			", unavailable=" + unavailable +
+			", category=" + category +
+			", group=" + group +
+			", tags=" + tags +
+			", duration=" + duration +
+			'}';
+	}
 }
