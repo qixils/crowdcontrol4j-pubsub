@@ -62,6 +62,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 	protected @Nullable String lastGameSessionID;
 	protected @Nullable CompletableFuture<Void> pendingAuthCode;
 	protected int sleep = 1;
+	protected long disconnectTriggeredAt = 0L;
 	protected ScheduledFuture<?> keepAlive = null;
 
 	static {
@@ -152,6 +153,13 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 		loadToken();
 	}
 
+	private void emitDisconnect(CloseData data) {
+		long now = System.currentTimeMillis();
+		if (now - disconnectTriggeredAt <= 250L) return;
+		disconnectTriggeredAt = now;
+		this.eventManager.dispatch(CCEventType.DISCONNECTED, data);
+	}
+
 	public void connect() {
 		log.info("Connecting WebSocket");
 		HttpUtil.HTTP_CLIENT.newWebSocketBuilder()
@@ -162,7 +170,8 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 	public CompletableFuture<?> close() {
 		if (!canSend()) return CompletableFuture.completedFuture(null);
 		assert ws != null;
-		return ws.sendClose(WebSocket.NORMAL_CLOSURE, "");
+		return ws.sendClose(WebSocket.NORMAL_CLOSURE, "")
+			.whenComplete(($1, $2) -> emitDisconnect(new CloseData(WebSocket.NORMAL_CLOSURE, null, false)));
 	}
 
 	public void clearKeepAlive() {
@@ -256,7 +265,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 
 	@Override
 	public CompletionStage<?> onClose(WebSocket webSocket, int statusCode, String reason) {
-		eventManager.dispatch(CCEventType.DISCONNECTED, new CloseData(statusCode, reason, true));
+		emitDisconnect(new CloseData(statusCode, reason, true));
 		return null;
 	}
 
