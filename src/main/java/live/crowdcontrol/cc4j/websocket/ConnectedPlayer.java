@@ -132,6 +132,11 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 					log.warn("Failed to query URL", e);
 					return null;
 				}
+				//noinspection ConstantValue
+				if (tokenPayload == null || tokenPayload.token() == null) {
+					log.warn("Failed to read token");
+					return null;
+				}
 				authCode = null;
 				setToken(tokenPayload.token());
 				saveToken();
@@ -514,11 +519,12 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 	}
 
 	protected void saveToken() {
-		if (this.token == null)
-			return;
-
 		try {
-			Files.writeString(tokenPath, token);
+			if (this.token == null) {
+				Files.deleteIfExists(tokenPath);
+			} else {
+				Files.writeString(tokenPath, token);
+			}
 		} catch (Exception e) {
 			log.warn("Failed to write user {} token", uuid, e);
 		}
@@ -560,6 +566,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 	public void clearToken() {
 		this.token = null;
 		this.userToken = null;
+		saveToken();
 	}
 
 	// True Boilerplate
