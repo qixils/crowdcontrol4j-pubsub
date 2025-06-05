@@ -556,6 +556,12 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 		);
 	}
 
+	@Override
+	public void clearToken() {
+		this.token = null;
+		this.userToken = null;
+	}
+
 	// True Boilerplate
 
 	@NotNull

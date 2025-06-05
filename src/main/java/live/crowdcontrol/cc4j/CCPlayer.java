@@ -105,4 +105,10 @@ public interface CCPlayer {
 	 */
 	@NotNull
 	CompletableFuture<?> regenerateAuthCode();
+
+	/**
+	 * Clears the user's auth token if they have one.
+	 * Will not automatically re-generate an auth code; see {@link #regenerateAuthCode()}.
+	 */
+	void clearToken();
 }
