@@ -557,7 +557,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 	public @Nullable String getAuthUrl() {
 		if (authCode == null) return null;
 		return String.format(
-			"https://auth.crowdcontrol.live/code/%s",
+			"https://auth.crowdcontrol.live/code/%s?showAllPlatforms=true",
 			authCode
 		);
 	}
