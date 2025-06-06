@@ -252,10 +252,10 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 					eventManager.dispatch(CCEventType.EFFECT_FAILURE, failurePayload);
 					break;
 				case "game-session-start":
-					eventManager.dispatch(CCEventType.SESSION_STARTED, JACKSON.treeToValue(event.payload, GameSessionStartPayload.class));
+//					eventManager.dispatch(CCEventType.SESSION_STARTED, JACKSON.treeToValue(event.payload, GameSessionStartPayload.class));
 					break;
 				case "game-session-stop":
-					eventManager.dispatch(CCEventType.SESSION_STOPPED, JACKSON.treeToValue(event.payload, GameSessionStopPayload.class));
+//					eventManager.dispatch(CCEventType.SESSION_STOPPED, JACKSON.treeToValue(event.payload, GameSessionStopPayload.class));
 					break;
 				// TODO: handle effect menu sync
 				// TODO: handle errors
@@ -454,6 +454,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 				filterReports(true, reports);
 			}
 			lastGameSessionID = gameSessionID;
+			eventManager.dispatch(CCEventType.SESSION_STARTED, payload);
 			return null;
 		});
 	}
@@ -462,12 +463,13 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 	public @NotNull CompletableFuture<?> stopSession() {
 		if (this.gameSessionID == null) return CompletableFuture.completedFuture(null);
 		if (this.token == null) return CompletableFuture.completedFuture(null);
-		return parent.getHttpUtil().apiPost("/game-session/stop", this.token, new GameSessionStopData(this.gameSessionID)).handle((payload, e) -> {
+		return parent.getHttpUtil().apiPost("/game-session/stop", GameSessionStopPayload.class, this.token, new GameSessionStopData(this.gameSessionID)).handle((payload, e) -> {
 			if (e != null) {
 				log.warn("Failed to query URL", e);
 				return null;
 			}
 			this.gameSessionID = null;
+			eventManager.dispatch(CCEventType.SESSION_STOPPED, payload);
 			return null;
 		});
 	}
