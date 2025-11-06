@@ -480,6 +480,9 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 
 	@Override
 	public @NotNull CompletableFuture<?> stopSession() {
+		// clean up in case someone switches to an older mod version ig?
+		setCustomEffects(Collections.singletonList(new CustomEffectsOperation("replace-all", Collections.emptyMap())));
+
 		if (this.gameSessionID == null) return CompletableFuture.completedFuture(null);
 		if (this.token == null) return CompletableFuture.completedFuture(null);
 		return parent.getHttpUtil().apiPost("/game-session/stop", GameSessionStopPayload.class, this.token, new GameSessionStopData(this.gameSessionID)).handle((payload, e) -> {
