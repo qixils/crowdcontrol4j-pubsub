@@ -163,14 +163,16 @@ public class CrowdControl {
 	 * Re-fetches the {@link #getGamePack() game pack}.
 	 */
 	public void loadGamePack() {
-		httpUtil.apiGet(String.format("/games/%s/packs", gameID), new TypeReference<List<GamePack>>() {
-		}, null).thenAcceptAsync(gamePacks -> {
-			if (gamePacks == null) return;
+		String url = String.format("/games/%s/packs", gameID);
+		httpUtil.apiGet(url, new TypeReference<List<GamePack>>() {
+		}, null).handleAsync((gamePacks, e) -> {
+			if (gamePacks == null) return null;
 			for (GamePack gamePack : gamePacks) {
 				if (!gamePack.getGamePackId().equalsIgnoreCase(gamePackID)) continue;
 				this.gamePack = gamePack;
-				return;
+				return null;
 			}
+			return null;
 		}, effectPool);
 	}
 

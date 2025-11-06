@@ -358,7 +358,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 		pendingAuthCode = new CompletableFuture<Void>().orTimeout(10, TimeUnit.SECONDS).handle((unused, throwable) -> null);
 		send(new SocketRequest(GenerateAuthCodeData.ACTION, new GenerateAuthCodeData(
 			parent.getAppID(),
-			List.of("profile:read", "session:write", "session:control"),
+			List.of("profile:read", "session:write", "session:control", "custom-effects:write"),
 			List.of(parent.getGamePackID()),
 			false
 		)));
@@ -428,6 +428,25 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 			CallDataMethod.EFFECT_REPORT,
 			reportList
 		));
+	}
+
+	@Override
+	public @NotNull CompletableFuture<?> setCustomEffects(@NotNull List<CustomEffectsOperation> operations) {
+		if (this.token == null) return CompletableFuture.completedFuture(null);
+		if (this.userToken == null) return CompletableFuture.completedFuture(null);
+		if (this.userToken.getApp() == null) return CompletableFuture.completedFuture(null);
+		if (!this.userToken.getApp().scopes().contains("custom-effects:write")) return CompletableFuture.completedFuture(null);
+
+		return parent.getHttpUtil().apiPut("/menu/custom-effects", this.token, new PutCustomEffectsData(
+			parent.getGamePackID(),
+			operations
+		)).handle((payload, e) -> {
+			if (e != null) {
+				log.warn("Failed to put custom effects", e);
+				return null;
+			}
+			return null;
+		});
 	}
 
 	@Override

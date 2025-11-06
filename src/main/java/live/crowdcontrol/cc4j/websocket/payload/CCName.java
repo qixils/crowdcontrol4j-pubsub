@@ -97,7 +97,8 @@ public class CCName implements Comparable<CCName> {
 				JsonNode node = codec.readTree(parser);
 
 				displayName = node.get("public").asText();
-				sortName = node.get("sort").asText(null);
+				JsonNode sortNode = node.get("sort");
+				sortName = sortNode != null ? sortNode.asText(null) : null; // idk why the node can be null
 			} else {
 				displayName = parser.getText();
 			}

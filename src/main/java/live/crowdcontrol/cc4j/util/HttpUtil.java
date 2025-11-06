@@ -128,4 +128,16 @@ public class HttpUtil {
 	public @NotNull CompletableFuture<String> apiPost(@NotNull String spec, @Nullable String token, @Nullable Object data) {
 		return apiCall("POST", spec, this::asString, token, data);
 	}
+
+	public <T> @NotNull CompletableFuture<T> apiPut(@NotNull String spec, @NotNull TypeReference<T> output, @Nullable String token, @Nullable Object data) {
+		return apiCall("PUT", spec, createOutputFunction(output), token, data);
+	}
+
+	public <T> @NotNull CompletableFuture<T> apiPut(@NotNull String spec, @NotNull Class<T> output, @Nullable String token, @Nullable Object data) {
+		return apiCall("PUT", spec, createOutputFunction(output), token, data);
+	}
+
+	public @NotNull CompletableFuture<String> apiPut(@NotNull String spec, @Nullable String token, @Nullable Object data) {
+		return apiCall("PUT", spec, this::asString, token, data);
+	}
 }

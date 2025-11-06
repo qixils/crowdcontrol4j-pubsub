@@ -1,7 +1,9 @@
 package live.crowdcontrol.cc4j.websocket.payload;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import live.crowdcontrol.cc4j.websocket.http.CustomEffectDuration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -25,7 +27,7 @@ public class CCBaseEffectDescription {
 	protected final @Nullable List<@NotNull String> category;
 	protected final @Nullable List<@NotNull String> group;
 	protected final @Nullable List<@NotNull String> tags;
-	protected final int duration;
+	protected final @Nullable CustomEffectDuration duration;
 	// TODO tiktok
 	// TODO sessionCooldown
 	// TODO userCooldown
@@ -45,7 +47,7 @@ public class CCBaseEffectDescription {
 								   @JsonProperty("category") @Nullable List<String> category,
 								   @JsonProperty("group") @Nullable List<String> group,
 								   @JsonProperty("tags") @Nullable List<String> tags,
-								   @JsonProperty("duration") int duration) {
+								   @JsonProperty("duration") @Nullable CustomEffectDuration duration) {
 		this.name = name;
 		this.image = image;
 		this.note = note;
@@ -197,12 +199,18 @@ public class CCBaseEffectDescription {
 
 	/**
 	 * The duration of the effect in seconds.
-	 * 0 if non-timed.
+	 * {@code null} if non-timed.
 	 *
-	 * @return duration in seconds
+	 * @return duration obj
 	 */
-	public int getDuration() {
+	@Nullable
+	public CustomEffectDuration getDuration() {
 		return duration;
+	}
+
+	@JsonIgnore
+	public long getDurationMillis() {
+		return duration == null ? 0 : Math.round(duration.value() * 1000d);
 	}
 
 	@Override

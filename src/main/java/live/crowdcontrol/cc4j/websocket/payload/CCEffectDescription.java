@@ -2,6 +2,7 @@ package live.crowdcontrol.cc4j.websocket.payload;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import live.crowdcontrol.cc4j.websocket.http.CustomEffectDuration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -30,7 +31,7 @@ public class CCEffectDescription extends CCBaseEffectDescription {
 								   @JsonProperty("category") @Nullable List<String> category,
 								   @JsonProperty("group") @Nullable List<String> group,
 								   @JsonProperty("tags") @Nullable List<String> tags,
-								   @JsonProperty("duration") int duration) {
+								   @JsonProperty("duration") @Nullable CustomEffectDuration duration) {
 		super(name, image, note, description, disabled, isNew, inactive, admin, hidden, unavailable, category, group, tags, duration);
 		this.effectID = effectID;
 		this.type = type;

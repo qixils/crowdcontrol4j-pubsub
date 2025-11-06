@@ -4,9 +4,11 @@ import live.crowdcontrol.cc4j.util.EventManager;
 import live.crowdcontrol.cc4j.websocket.UserToken;
 import live.crowdcontrol.cc4j.websocket.data.CCEffectReport;
 import live.crowdcontrol.cc4j.websocket.data.CCEffectResponse;
+import live.crowdcontrol.cc4j.websocket.http.CustomEffectsOperation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -79,6 +81,15 @@ public interface CCPlayer {
 	 * @return whether the report could be sent
 	 */
 	CompletableFuture<Boolean> sendReport(@NotNull CCEffectReport @NotNull ... reports);
+
+	/**
+	 * Attempts to set the specified custom effects.
+	 * May fail if they have not yet authenticated.
+	 *
+	 * @return future to complete when finished
+	 */
+	@NotNull
+	CompletableFuture<?> setCustomEffects(@NotNull List<CustomEffectsOperation> operations);
 
 	/**
 	 * Attempts to start the streamer's session.

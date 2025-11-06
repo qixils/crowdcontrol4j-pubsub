@@ -8,6 +8,7 @@ import org.intellij.lang.annotations.Pattern;
 import org.intellij.lang.annotations.RegExp;
 import org.intellij.lang.annotations.Subst;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
@@ -24,6 +25,7 @@ public class UserToken implements IUserRecord {
 	private final @NotNull ProfileType profile;
 	private final @NotNull String name;
 	private final @NotNull List<@NotNull String> roles;
+	private final @Nullable UserTokenApplication app;
 	private final long exp;
 	private final @NotNull String ver;
 
@@ -35,6 +37,7 @@ public class UserToken implements IUserRecord {
 					 @JsonProperty("profileType") @NotNull ProfileType profile,
 					 @JsonProperty("name") @NotNull String name,
 					 @JsonProperty("roles") @NotNull List<@NotNull String> roles,
+					 @JsonProperty("app") @Nullable UserTokenApplication app,
 					 @JsonProperty("exp") long exp,
 					 @JsonProperty("ver") @NotNull String ver) {
 		this.type = type;
@@ -44,6 +47,7 @@ public class UserToken implements IUserRecord {
 		this.profile = profile;
 		this.name = name;
 		this.roles = roles;
+		this.app = app;
 		this.exp = exp;
 		this.ver = ver;
 	}
@@ -87,6 +91,15 @@ public class UserToken implements IUserRecord {
 	 */
 	public @NotNull List<@NotNull String> getRoles() {
 		return roles;
+	}
+
+	/**
+	 * Gets the details for the Application that initialized this token.
+	 *
+	 * @return app details or null
+	 */
+	public @Nullable UserTokenApplication getApp() {
+		return app;
 	}
 
 	/**
