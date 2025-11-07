@@ -12,8 +12,7 @@ version = "1.1.0"
 plugins {
     // Apply the java-library plugin for API and implementation separation.
     `java-library`
-    `maven-publish`
-    signing
+    id("com.vanniktech.maven.publish") version "0.34.0"
 }
 
 repositories {
@@ -49,8 +48,6 @@ java {
     }
     sourceCompatibility = javaVersion
     targetCompatibility = javaVersion
-    withJavadocJar()
-    withSourcesJar()
 }
 
 tasks.named<Test>("test") {
@@ -58,49 +55,35 @@ tasks.named<Test>("test") {
     useJUnitPlatform()
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("mavenJava") {
-            from(components["java"])
+mavenPublishing {
+    publishToMavenCentral(automaticRelease = true)
+    signAllPublications()
 
-            pom {
-                name = "crowdcontrol4j pubsub"
-                description = "An implementation of the Crowd Control PubSub WebSocket protocol for Java 21+"
-                url = "http://github.com/qixils/crowdcontrol4j-pubsub"
-                licenses {
-                    license {
-                        name = "Functional Source License, Version 1.1, Apache 2.0 Future License"
-                        url = "https://github.com/qixils/crowdcontrol4j-pubsub/blob/main/LICENSE.md"
-                    }
-                }
-                developers {
-                    developer {
-                        id = "qixils"
-                        name = "Lexi Larkin"
-                        email = "lexi+git@qixils.dev"
-                    }
-                }
-                scm {
-                    connection = "scm:git:git://github.com/qixils/crowdcontrol4j-pubsub.git"
-                    developerConnection = "scm:git:ssh://github.com/qixils/crowdcontrol4j-pubsub.git"
-                    url = "http://github.com/qixils/crowdcontrol4j-pubsub/"
-                }
+    coordinates(groupId = "dev.qixils", artifactId = "cc4j-pubsub")
+
+    pom {
+        name.set("crowdcontrol4j pubsub")
+        description.set("An implementation of the Crowd Control PubSub WebSocket protocol for Java 21+")
+        inceptionYear.set("2024")
+        url.set("http://github.com/qixils/crowdcontrol4j-pubsub")
+        licenses {
+            license {
+                name.set("Functional Source License, Version 1.1, Apache 2.0 Future License")
+                url.set("https://github.com/qixils/crowdcontrol4j-pubsub/blob/main/LICENSE.md")
+                distribution.set("https://github.com/qixils/crowdcontrol4j-pubsub/blob/main/LICENSE.md")
             }
         }
-    }
-    repositories {
-        maven {
-            name = "OSSRH"
-            url = uri(if (version.toString().contains("SNAPSHOT")) "https://s01.oss.sonatype.org/content/repositories/snapshots/"
-            else "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
-            credentials {
-                username = findProperty("ossrhUsername") as String?
-                password = findProperty("ossrhPassword") as String?
+        developers {
+            developer {
+                id.set("qixils")
+                name.set("Lexi Larkin")
+                url.set("https://github.com/qixils/")
             }
         }
+        scm {
+            url.set("http://github.com/qixils/crowdcontrol4j-pubsub/")
+            connection.set("scm:git:git://github.com/qixils/crowdcontrol4j-pubsub.git")
+            developerConnection.set("scm:git:git://github.com/qixils/crowdcontrol4j-pubsub.git")
+        }
     }
-}
-
-signing {
-    sign(publishing.publications["mavenJava"])
 }
