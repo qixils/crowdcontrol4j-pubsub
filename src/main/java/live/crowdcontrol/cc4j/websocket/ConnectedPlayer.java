@@ -71,6 +71,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 		mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 		SimpleModule module = new SimpleModule("CrowdControlSerializers");
 		module.addDeserializer(CCName.class, new CCName.CCNameAdapter());
+		module.addDeserializer(CustomEffectDuration.class, new CustomEffectDuration.CustomEffectDurationAdapter());
 		mapper.registerModule(module);
 		JACKSON = mapper;
 	}
