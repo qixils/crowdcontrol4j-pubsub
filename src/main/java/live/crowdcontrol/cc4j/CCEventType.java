@@ -58,6 +58,11 @@ public class CCEventType<T> {
 	}
 
 	/**
+	 * Called when a notification message may be displayed to the player.
+	 */
+	public static final CCEventType<CCMessage> MESSAGE = new CCEventType<>("message", CCMessage.class);
+
+	/**
 	 * Called when a player's WebSocket initially establishes its connection.
 	 * The connectionID will be unavailable at this point.
 	 */

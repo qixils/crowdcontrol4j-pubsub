@@ -56,7 +56,7 @@ public class HttpUtil {
 					con.setRequestProperty("Accept", "application/json");
 					con.setDoOutput(true);
 					try (OutputStream os = con.getOutputStream()) {
-//						log.info("Outputting {}", JACKSON.writeValueAsString(data));
+//						log.info("Outputting to {}: {}", spec, JACKSON.writeValueAsString(data));
 						JACKSON.writeValue(os, data);
 					}
 				}

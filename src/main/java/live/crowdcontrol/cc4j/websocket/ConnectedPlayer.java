@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import live.crowdcontrol.cc4j.CCEventType;
+import live.crowdcontrol.cc4j.CCMessage;
 import live.crowdcontrol.cc4j.CCPlayer;
 import live.crowdcontrol.cc4j.CrowdControl;
 import live.crowdcontrol.cc4j.util.CloseData;
@@ -64,6 +65,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 	protected int sleep = 1;
 	protected long disconnectTriggeredAt = 0L;
 	protected ScheduledFuture<?> keepAlive = null;
+	protected ScheduledFuture<?> timeout = null;
 
 	static {
 		ObjectMapper mapper = new ObjectMapper();
@@ -105,9 +107,14 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 			resetKeepAlive();
 		});
 		this.eventManager.registerEventConsumer(CCEventType.DISCONNECTED, data -> {
+			if (timeout != null) {
+				timeout.cancel(false);
+				timeout = null;
+			}
 			this.ws = null;
 			// check that the player hasn't just left
 			if (this.parent.getPlayer(uuid) != this) return;
+			this.eventManager.dispatch(CCEventType.MESSAGE, new CCMessage(CCMessage.Level.WARN, "Reconnecting to socket in " + sleep + " second(s)"));
 			try {
 				Thread.sleep(sleep * 1000L);
 			} catch (InterruptedException ignored) {
@@ -116,6 +123,10 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 			connect(); // reconnect!
 		});
 		this.eventManager.registerEventConsumer(CCEventType.GENERATED_AUTH_CODE, payload -> {
+			if (timeout != null) {
+				timeout.cancel(false);
+				timeout = null;
+			}
 			this.authCode = payload.code();
 			if (pendingAuthCode != null) {
 				pendingAuthCode.complete(null);
@@ -131,11 +142,13 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 			).handle((tokenPayload, e) -> {
 				if (e != null) {
 					log.warn("Failed to query URL", e);
+					this.eventManager.dispatch(CCEventType.MESSAGE, new CCMessage(CCMessage.Level.ERROR, "Failed to authenticate account"));
 					return null;
 				}
 				//noinspection ConstantValue
 				if (tokenPayload == null || tokenPayload.token() == null) {
 					log.warn("Failed to read token");
+					this.eventManager.dispatch(CCEventType.MESSAGE, new CCMessage(CCMessage.Level.ERROR, "Failed to verify account"));
 					return null;
 				}
 				authCode = null;
@@ -146,10 +159,15 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 		});
 		this.eventManager.registerEventConsumer(CCEventType.ERRORED_AUTH_CODE, payload -> {
 			log.warn("Failed to redeem auth code for reason {}, generating new one", payload.message());
+			this.eventManager.dispatch(CCEventType.MESSAGE, new CCMessage(CCMessage.Level.ERROR, "Failed to redeem auth code"));
 			send(new SocketRequest(GenerateAuthCodeData.ACTION, new GenerateAuthCodeData(parent.getAppID())));
 		});
 		this.eventManager.registerEventRunnable(CCEventType.AUTHENTICATED, this::subscribe);
 		this.eventManager.registerEventConsumer(CCEventType.SUBSCRIBED, payload -> {
+			if (timeout != null) {
+				timeout.cancel(false);
+				timeout = null;
+			}
 			assert this.userToken != null : "Subscribed before authenticating";
 			this.subscriptions.addAll(payload.getSuccess());
 		});
@@ -161,13 +179,19 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 
 	private void emitDisconnect(CloseData data) {
 		long now = System.currentTimeMillis();
-		if (now - disconnectTriggeredAt <= 250L) return;
+		if ((now - disconnectTriggeredAt) <= 900L) return;
 		disconnectTriggeredAt = now;
 		this.eventManager.dispatch(CCEventType.DISCONNECTED, data);
 	}
 
 	public void connect() {
 		log.info("Connecting WebSocket");
+
+		timeout = parent.getTimedEffectPool().schedule(() -> {
+			this.eventManager.dispatch(CCEventType.MESSAGE, new CCMessage(CCMessage.Level.WARN, "Failed to initiate socket connection"));
+			close();
+		}, 60, TimeUnit.SECONDS);
+
 		HttpUtil.HTTP_CLIENT.newWebSocketBuilder()
 			.buildAsync(URI.create("wss://pubsub.crowdcontrol.live/"), this)
 			.thenAccept(ws -> this.ws = ws);
@@ -278,6 +302,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 	@Override
 	public void onError(WebSocket webSocket, Throwable error) {
 		log.error("An unknown WebSocket error has occurred", error);
+		this.eventManager.dispatch(CCEventType.MESSAGE, new CCMessage(CCMessage.Level.WARN, "An unknown socket error occurred"));
 	}
 
 	// Semi Boilerplate
@@ -530,10 +555,10 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 	}
 
 	protected boolean loadToken() {
-		if (!Files.exists(tokenPath))
-			return false;
-
 		try {
+			if (!Files.exists(tokenPath))
+				return false;
+
 			try (BufferedReader reader = Files.newBufferedReader(tokenPath)) {
 				return setToken(reader.readLine());
 			}

@@ -53,7 +53,8 @@ public class GameSessionStartData {
 	 *
 	 * @return effect reports
 	 */
-	public @Nullable List<CCEffectReport> getEffectReports() {
+	@JsonProperty("effectReportArgs")
+	public @Nullable List<CCEffectReport> getEffectReportArgs() {
 		return effectReportArgs;
 	}
 }
