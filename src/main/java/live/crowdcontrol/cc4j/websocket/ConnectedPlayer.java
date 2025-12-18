@@ -88,7 +88,6 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 
 		this.eventManager.registerEventConsumer(CCEventType.CONNECTED, handshake -> {
 //			log.info("Connected event");
-			sleep = 1;
 			// Sleep for a bit to workaround issue where socket appears to still be opening
 			long wait = 1L;
 			while (!canSend() && wait <= 10) {
@@ -123,6 +122,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 			connect(); // reconnect!
 		});
 		this.eventManager.registerEventConsumer(CCEventType.GENERATED_AUTH_CODE, payload -> {
+			sleep = 1;
 			if (timeout != null) {
 				timeout.cancel(false);
 				timeout = null;
@@ -164,6 +164,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 		});
 		this.eventManager.registerEventRunnable(CCEventType.AUTHENTICATED, this::subscribe);
 		this.eventManager.registerEventConsumer(CCEventType.SUBSCRIBED, payload -> {
+			sleep = 1;
 			if (timeout != null) {
 				timeout.cancel(false);
 				timeout = null;
