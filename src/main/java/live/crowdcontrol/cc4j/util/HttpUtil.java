@@ -4,8 +4,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import live.crowdcontrol.cc4j.CrowdControl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -23,8 +21,6 @@ import static live.crowdcontrol.cc4j.websocket.ConnectedPlayer.JACKSON;
 public class HttpUtil {
 	public static final @NotNull URL OPEN_API_URL;
 	public static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
-	private static final @NotNull TypeReference<String> STRING_TYPE = new TypeReference<String>() { };
-	private static final Logger log = LoggerFactory.getLogger("CrowdControl/HttpUtil");
 
 	static {
 		try {
