@@ -7,7 +7,9 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -73,15 +75,11 @@ public class HttpUtil {
 	}
 
 	private String asString(InputStream stream) {
-		try (BufferedReader br = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
-			StringBuilder response = new StringBuilder();
-			String responseLine;
-			while ((responseLine = br.readLine()) != null) {
-				response.append(responseLine.trim());
-			}
-			return response.toString();
+		try {
+			byte[] bytes = stream.readAllBytes();
+			return new String(bytes, StandardCharsets.UTF_8);
 		} catch (Exception e) {
-			throw new RuntimeException(e);
+			throw new RuntimeException("Failed to read as string", e);
 		}
 	}
 

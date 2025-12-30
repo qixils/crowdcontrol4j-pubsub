@@ -7,7 +7,7 @@
 
 // name is set in settings.gradle.kts lol
 group = "dev.qixils.cc4j"
-version = "1.1.3"
+version = "1.1.4-SNAPSHOT"
 
 plugins {
     // Apply the java-library plugin for API and implementation separation.
