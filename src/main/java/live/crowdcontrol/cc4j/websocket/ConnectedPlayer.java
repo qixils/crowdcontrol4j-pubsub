@@ -5,10 +5,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import live.crowdcontrol.cc4j.CCEventType;
-import live.crowdcontrol.cc4j.CCMessage;
-import live.crowdcontrol.cc4j.CCPlayer;
-import live.crowdcontrol.cc4j.CrowdControl;
+import live.crowdcontrol.cc4j.*;
 import live.crowdcontrol.cc4j.util.CloseData;
 import live.crowdcontrol.cc4j.util.EventManager;
 import live.crowdcontrol.cc4j.util.HttpUtil;
@@ -194,7 +191,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 		}, 60, TimeUnit.SECONDS);
 
 		HttpUtil.HTTP_CLIENT.newWebSocketBuilder()
-			.buildAsync(URI.create("wss://pubsub.crowdcontrol.live/"), this)
+			.buildAsync(URI.create(ServerURLs.PUBSUB), this)
 			.thenAccept(ws -> this.ws = ws);
 	}
 
@@ -608,7 +605,8 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 	public @Nullable String getAuthUrl() {
 		if (authCode == null) return null;
 		return String.format(
-			"https://auth.crowdcontrol.live/code/%s?showAllPlatforms=true",
+			"%s/code/%s?showAllPlatforms=true",
+			ServerURLs.AUTH,
 			authCode
 		);
 	}
