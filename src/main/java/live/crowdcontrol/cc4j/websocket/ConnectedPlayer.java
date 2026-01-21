@@ -460,6 +460,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 		if (this.userToken == null) return CompletableFuture.completedFuture(null);
 		if (this.userToken.getApp() == null) return CompletableFuture.completedFuture(null);
 		if (!this.userToken.getApp().scopes().contains("custom-effects:write")) return CompletableFuture.completedFuture(null);
+		if (operations.isEmpty()) return CompletableFuture.completedFuture(null);
 
 		return parent.getHttpUtil().apiPut("/menu/custom-effects", this.token, new PutCustomEffectsData(
 			parent.getGamePackID(),

@@ -161,16 +161,29 @@ public class CrowdControl {
 
 	/**
 	 * Re-fetches the {@link #getGamePack() game pack}.
+	 *
+	 * @return future representing the loaded game pack
 	 */
-	public void loadGamePack() {
+	@NotNull
+	public CompletableFuture<@Nullable GamePack> loadGamePack() {
+		return loadGamePack(null);
+	}
+
+	/**
+	 * Re-fetches the {@link #getGamePack() game pack}.
+	 *
+	 * @return future representing the loaded game pack
+	 */
+	@NotNull
+	public CompletableFuture<@Nullable GamePack> loadGamePack(@Nullable String token) {
 		String url = String.format("/games/%s/packs", gameID);
-		httpUtil.apiGet(url, new TypeReference<List<GamePack>>() {
-		}, null).handleAsync((gamePacks, e) -> {
+		return httpUtil.apiGet(url, new TypeReference<List<GamePack>>() {
+		}, token).handleAsync((gamePacks, e) -> {
 			if (gamePacks == null) return null;
 			for (GamePack gamePack : gamePacks) {
 				if (!gamePack.getGamePackId().equalsIgnoreCase(gamePackID)) continue;
 				this.gamePack = gamePack;
-				return null;
+				return gamePack;
 			}
 			return null;
 		}, effectPool);
