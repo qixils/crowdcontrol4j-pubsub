@@ -179,6 +179,10 @@ public class CrowdControl {
 		String url = String.format("/games/%s/packs", gameID);
 		return httpUtil.apiGet(url, new TypeReference<List<GamePack>>() {
 		}, token).handleAsync((gamePacks, e) -> {
+			if (e != null) {
+				log.warn("Failed to deserialize game packs", e);
+				return null;
+			}
 			if (gamePacks == null) return null;
 			for (GamePack gamePack : gamePacks) {
 				if (!gamePack.getGamePackId().equalsIgnoreCase(gamePackID)) continue;

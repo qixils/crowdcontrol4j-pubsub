@@ -12,6 +12,7 @@ import java.util.List;
 import static live.crowdcontrol.cc4j.websocket.http.GamePayload.DATE_PATTERN;
 
 public class GamePackMeta {
+//   *     launcher
 //	 *     mod: z
 //	 *       .strictObject({
 //	 *         version: z.string().optional(),
@@ -37,7 +38,6 @@ public class GamePackMeta {
 	private final @Nullable String image;
 	private final @Nullable String firmware;
 	private final @Nullable String executable;
-	private final @Nullable String launcher;
 	private final @Nullable String process;
 	private final @Nullable String description;
 	private final @Nullable String lastStepMessage;
@@ -70,7 +70,6 @@ public class GamePackMeta {
 						@JsonProperty("image") @Nullable String image,
 						@JsonProperty("firmware") @Nullable String firmware,
 						@JsonProperty("executable") @Nullable String executable,
-						@JsonProperty("launcher") @Nullable String launcher,
 						@JsonProperty("process") @Nullable String process,
 						@JsonProperty("description") @Nullable String description,
 						@JsonProperty("lastStepMessage") @Nullable String lastStepMessage,
@@ -101,7 +100,6 @@ public class GamePackMeta {
 		this.image = image;
 		this.firmware = firmware;
 		this.executable = executable;
-		this.launcher = launcher;
 		this.process = process;
 		this.description = description;
 		this.lastStepMessage = lastStepMessage;
@@ -164,10 +162,6 @@ public class GamePackMeta {
 
 	public @Nullable String getExecutable() {
 		return executable;
-	}
-
-	public @Nullable String getLauncher() {
-		return launcher;
 	}
 
 	public @Nullable String getProcess() {
