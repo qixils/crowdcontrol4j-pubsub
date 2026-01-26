@@ -25,6 +25,7 @@ import java.net.http.WebSocket;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -186,13 +187,22 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 		log.info("Connecting WebSocket");
 
 		timeout = parent.getTimedEffectPool().schedule(() -> {
-			this.eventManager.dispatch(CCEventType.MESSAGE, new CCMessage(CCMessage.Level.WARN, "Failed to initiate socket connection"));
+			this.eventManager.dispatch(CCEventType.MESSAGE, new CCMessage(CCMessage.Level.WARN, "Timed out connecting to socket"));
 			close();
 		}, 60, TimeUnit.SECONDS);
 
 		HttpUtil.HTTP_CLIENT.newWebSocketBuilder()
+			.connectTimeout(Duration.ofSeconds(55))
 			.buildAsync(URI.create(ServerURLs.PUBSUB), this)
-			.thenAccept(ws -> this.ws = ws);
+			.handle((ws, e) -> {
+				this.ws = ws;
+				if (e != null) {
+					log.error("An error occurred connecting to socket", e);
+					this.eventManager.dispatch(CCEventType.MESSAGE, new CCMessage(CCMessage.Level.WARN, "An error occurred connecting to socket"));
+					emitDisconnect(new CloseData(0, "", true));
+				}
+				return ws;
+			});
 	}
 
 	public CompletableFuture<?> close() {
