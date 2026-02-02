@@ -88,9 +88,11 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 //			log.info("Connected event");
 			// Sleep for a bit to workaround issue where socket appears to still be opening
 			long wait = 1L;
-			while (!canSend() && wait <= 10) {
+			while (!canSend() && wait <= 5) {
+				long sleepFor = wait * 500L;
+//				log.info("Waiting {}ms for socket to finish opening...", sleepFor);
 				try {
-					Thread.sleep(wait * 500L);
+					Thread.sleep(sleepFor);
 				} catch (InterruptedException ignored) {
 				} finally {
 					wait *= 2;
@@ -104,11 +106,13 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 			resetKeepAlive();
 		});
 		this.eventManager.registerEventConsumer(CCEventType.DISCONNECTED, data -> {
+			clearKeepAlive();
 			if (timeout != null) {
 				timeout.cancel(false);
 				timeout = null;
 			}
 			this.ws = null;
+			this.subscriptions.clear();
 			// check that the player hasn't just left
 			if (this.parent.getPlayer(uuid) != this) return;
 			this.eventManager.dispatch(CCEventType.MESSAGE, new CCMessage(CCMessage.Level.WARN, "Reconnecting to socket in " + sleep + " second(s)"));
@@ -120,11 +124,8 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 			connect(); // reconnect!
 		});
 		this.eventManager.registerEventConsumer(CCEventType.GENERATED_AUTH_CODE, payload -> {
-			sleep = 1;
-			if (timeout != null) {
-				timeout.cancel(false);
-				timeout = null;
-			}
+			// we're successfully connected!
+			onConnectionSuccessful();
 			this.authCode = payload.code();
 			if (pendingAuthCode != null) {
 				pendingAuthCode.complete(null);
@@ -162,11 +163,9 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 		});
 		this.eventManager.registerEventRunnable(CCEventType.AUTHENTICATED, this::subscribe);
 		this.eventManager.registerEventConsumer(CCEventType.SUBSCRIBED, payload -> {
-			sleep = 1;
-			if (timeout != null) {
-				timeout.cancel(false);
-				timeout = null;
-			}
+			// we're successfully connected!
+			onConnectionSuccessful();
+
 			assert this.userToken != null : "Subscribed before authenticating";
 			this.subscriptions.addAll(payload.getSuccess());
 		});
@@ -174,6 +173,18 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 		this.eventManager.registerEventConsumer(CCEventType.EFFECT_FAILURE, payload -> parent.cancelByRequestId(payload.getRequestId()));
 
 		loadToken();
+	}
+
+	private void onConnectionSuccessful() {
+		// we're successfully connected! reset attempt count...
+		sleep = 1;
+		// ...stop initial timeout...
+		if (timeout != null) {
+			timeout.cancel(false);
+			timeout = null;
+		}
+		// ... and start keepalive
+		resetKeepAlive();
 	}
 
 	private void emitDisconnect(CloseData data) {
@@ -195,6 +206,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 			.connectTimeout(Duration.ofSeconds(55))
 			.buildAsync(URI.create(ServerURLs.PUBSUB), this)
 			.handle((ws, e) -> {
+				log.info("Established initial connection");
 				this.ws = ws;
 				if (e != null) {
 					log.error("An error occurred connecting to socket", e);
@@ -222,16 +234,26 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 		if (!canSend()) return;
 		assert ws != null;
 		clearKeepAlive();
+
+		// we don't need to start keeping alive until the initial timeout is finished
+		if (timeout != null) return;
+
+		// wait a bit before sending another ping
 		keepAlive = parent.getTimedEffectPool().schedule(() -> {
-			log.info("KeepAlive failed, reconnecting");
-			clearKeepAlive();
-			close();
+			// prepare the keepalive kill task
+			keepAlive = parent.getTimedEffectPool().schedule(() -> {
+				log.info("KeepAlive failed, reconnecting");
+				clearKeepAlive();
+				close();
+			}, 15, TimeUnit.SECONDS);
+
+			ws.sendPing(ByteBuffer.allocate(0));
 		}, 15, TimeUnit.SECONDS);
-		ws.sendPing(ByteBuffer.allocate(0));
 	}
 
 	@Override
 	public CompletionStage<?> onPong(WebSocket webSocket, ByteBuffer message) {
+//		log.info("pong");
 		resetKeepAlive();
 		return null;
 	}
@@ -245,6 +267,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 
 	@Override
 	public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
+//		log.info("Receiving text {}", data);
 		pendingText.append(data);
 		if (!last) return null;
 		try {
@@ -303,6 +326,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 
 	@Override
 	public CompletionStage<?> onClose(WebSocket webSocket, int statusCode, String reason) {
+		log.warn("Close initiated {} {}", statusCode, reason);
 		emitDisconnect(new CloseData(statusCode, reason, true));
 		return null;
 	}
@@ -345,6 +369,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 					.sendText(message, true)
 					.handleAsync(($, e) -> {
 						if (e != null) throw new IllegalStateException("WebSocket failed to send message " + message.substring(0, 20), e);
+//						log.info("Sent WS message {}", message);
 						return message;
 					})
 					.join(); // this ensures the lock works as expected!

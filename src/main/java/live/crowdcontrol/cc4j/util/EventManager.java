@@ -8,10 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -44,12 +41,18 @@ public final class EventManager {
 			.filter(record -> catchUpPeriod == -1 || !Instant.now().minusSeconds(catchUpPeriod).isBefore(record.getTriggeredAt()));
 	}
 
-	private <T> void invoke(@NotNull EventRecord<T> record, @NotNull Consumer<T> listener) {
+	private <T> void invoke(@NotNull EventRecord<T> record, @NotNull List<Consumer<T>> listeners, int index) {
 		parent.getEventPool().submit(() -> {
+			Consumer<T> listener = listeners.get(index);
 			try {
 				listener.accept(record.getEventBody());
 			} catch (Exception e) {
 				log.error("Failed to dispatch event {} to listener {}", record.getEventType(), listener.getClass().getSimpleName(), e);
+			}
+
+			int nextIndex = index + 1;
+			if (listeners.size() > nextIndex) {
+				invoke(record, listeners, nextIndex);
 			}
 		});
 	}
@@ -60,8 +63,9 @@ public final class EventManager {
 
 		List<Consumer<T>> eventListeners = (List<Consumer<T>>) (Object) listeners.get(event);
 		if (eventListeners != null) {
-			for (Consumer<T> listener : eventListeners) {
-				invoke(record, listener);
+			List<Consumer<T>> cloned = new ArrayList<>(eventListeners);
+			if (!cloned.isEmpty()) {
+				invoke(record, cloned, 0);
 			}
 		}
 
@@ -103,7 +107,7 @@ public final class EventManager {
 	 */
 	public <T> void registerEventConsumer(@NotNull CCEventType<T> event, @NotNull Consumer<T> listener, int catchUpPeriod) {
 		listeners.computeIfAbsent(event, $ -> new ArrayList<>()).add(listener);
-		getRecords(event, catchUpPeriod).forEachOrdered(record -> invoke(record, listener));
+		getRecords(event, catchUpPeriod).forEachOrdered(record -> invoke(record, Collections.singletonList(listener), 0));
 	}
 
 	/**
