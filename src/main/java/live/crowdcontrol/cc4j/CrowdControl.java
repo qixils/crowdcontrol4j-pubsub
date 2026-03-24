@@ -396,7 +396,9 @@ public class CrowdControl {
 		effect.scheduleCompleter(timedResponse.getTimeRemaining());
 	}
 
-	private void cancel(ActiveEffect effect, String message) {
+	private void cancel(@NotNull ActiveEffect effect, @NotNull String message) {
+		if (effect == null) return; // !?
+
 		pendingRequests.remove(effect.getPayload().getRequestId());
 
 		if (effect.isTimed()) {
@@ -437,13 +439,13 @@ public class CrowdControl {
 	}
 
 	public void cancelAll() {
-		Set<UUID> keys = new HashSet<>(pendingRequests.keySet());
-		for (UUID key : keys)
-			cancel(pendingRequests.get(key), "Effect cancelled before execution");
+		Collection<ActiveEffect> values = new ArrayList<>(pendingRequests.values());
+		for (ActiveEffect effect : values)
+			cancel(effect, "Effect cancelled before execution");
 
-		keys = new HashSet<>(timedRequests.keySet());
-		for (UUID key : keys)
-			cancel(timedRequests.get(key), "Effect cancelled during execution");
+		values = new ArrayList<>(timedRequests.values());
+		for (ActiveEffect effect : values)
+			cancel(effect, "Effect cancelled during execution");
 	}
 
 	/**
