@@ -9,10 +9,19 @@ public record GenerateAuthCodeData(
 	@NotNull String appID,
 	@Nullable List<String> scopes,
 	@Nullable List<String> packs,
-	@Nullable Boolean qrCode
+	@Nullable Boolean qrCode,
+	@Nullable String codeChallenge,
+	@Nullable String codeChallengeMethod
 ) {
 	public GenerateAuthCodeData(@NotNull String appID) {
-		this(appID, null, null, null);
+		this(appID, null, null, null, null, null);
+	}
+
+	public GenerateAuthCodeData(@NotNull String appID,
+								@Nullable List<String> scopes,
+								@Nullable List<String> packs,
+								@Nullable Boolean qrCode) {
+		this(appID, scopes, packs, qrCode, null, null);
 	}
 
 	public static @NotNull String ACTION = "generate-auth-code";

@@ -23,8 +23,12 @@ import java.io.BufferedReader;
 import java.net.URI;
 import java.net.http.WebSocket;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -55,6 +59,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 	protected @NotNull StringBuilder pendingText = new StringBuilder();
 	protected @Nullable WebSocket ws;
 	protected @Nullable String authCode;
+	protected @Nullable String pkceVerifier;
 	protected @Nullable String token;
 	protected @Nullable UserToken userToken;
 	protected @Nullable String gameSessionID;
@@ -133,11 +138,31 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 			}
 		});
 		this.eventManager.registerEventConsumer(CCEventType.REDEEMED_AUTH_CODE, payload -> {
+			AuthApplicationTokenData tokenData;
+			if (parent.isPublicClient()) {
+				String verifier = this.pkceVerifier;
+				if (verifier == null) {
+					log.warn("Auth code was redeemed but no PKCE verifier is held; requesting a new code");
+					this.eventManager.dispatch(CCEventType.MESSAGE, new CCMessage(CCMessage.Level.ERROR, "Failed to authenticate account"));
+					send(new SocketRequest(GenerateAuthCodeData.ACTION, createAuthCodeData(null, null, null)));
+					return;
+				}
+				tokenData = AuthApplicationTokenData.forPkce(parent.getAppID(), payload.code(), verifier);
+			} else {
+				String appSecret = parent.getAppSecret();
+				if (appSecret == null) {
+					log.warn("Auth code was redeemed but for an authenticated client; requesting a new code");
+					this.eventManager.dispatch(CCEventType.MESSAGE, new CCMessage(CCMessage.Level.ERROR, "Failed to authenticate account"));
+					send(new SocketRequest(GenerateAuthCodeData.ACTION, createAuthCodeData(null, null, null)));
+					return;
+				}
+				tokenData = new AuthApplicationTokenData(parent.getAppID(), payload.code(), appSecret);
+			}
 			parent.getHttpUtil().apiPost(
 				"/auth/application/token",
 				AuthApplicationTokenPayload.class,
 				null,
-				new AuthApplicationTokenData(parent.getAppID(), payload.code(), parent.getAppSecret())
+				tokenData
 			).handle((tokenPayload, e) -> {
 				if (e != null) {
 					log.warn("Failed to query URL", e);
@@ -159,7 +184,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 		this.eventManager.registerEventConsumer(CCEventType.ERRORED_AUTH_CODE, payload -> {
 			log.warn("Failed to redeem auth code for reason {}, generating new one", payload.message());
 			this.eventManager.dispatch(CCEventType.MESSAGE, new CCMessage(CCMessage.Level.ERROR, "Failed to redeem auth code"));
-			send(new SocketRequest(GenerateAuthCodeData.ACTION, new GenerateAuthCodeData(parent.getAppID())));
+			send(new SocketRequest(GenerateAuthCodeData.ACTION, createAuthCodeData(null, null, null)));
 		});
 		this.eventManager.registerEventRunnable(CCEventType.AUTHENTICATED, this::subscribe);
 		this.eventManager.registerEventConsumer(CCEventType.SUBSCRIBED, payload -> {
@@ -415,13 +440,36 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 			else return pendingAuthCode;
 		}
 		pendingAuthCode = new CompletableFuture<Void>().orTimeout(10, TimeUnit.SECONDS).handle((unused, throwable) -> null);
-		send(new SocketRequest(GenerateAuthCodeData.ACTION, new GenerateAuthCodeData(
-			parent.getAppID(),
+		send(new SocketRequest(GenerateAuthCodeData.ACTION, createAuthCodeData(
 			List.of("profile:read", "session:write", "session:control", "custom-effects:write"),
 			List.of(parent.getGamePackID()),
 			false
 		)));
 		return pendingAuthCode;
+	}
+
+	/**
+	 * Builds a {@link GenerateAuthCodeData}, attaching a fresh PKCE S256 code
+	 * challenge when the parent is a public (secret-less) client. The matching
+	 * {@code code_verifier} is held until the code is redeemed and then used
+	 * in place of the app secret on the token exchange (RFC 7636).
+	 */
+	protected @NotNull GenerateAuthCodeData createAuthCodeData(@Nullable List<String> scopes, @Nullable List<String> packs, @Nullable Boolean qrCode) {
+		if (!parent.isPublicClient()) {
+			return new GenerateAuthCodeData(parent.getAppID(), scopes, packs, qrCode);
+		}
+		byte[] randomBytes = new byte[32];
+		new SecureRandom().nextBytes(randomBytes);
+		String verifier = Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
+		String challenge;
+		try {
+			byte[] digest = MessageDigest.getInstance("SHA-256").digest(verifier.getBytes(StandardCharsets.US_ASCII));
+			challenge = Base64.getUrlEncoder().withoutPadding().encodeToString(digest);
+		} catch (NoSuchAlgorithmException e) {
+			throw new IllegalStateException("JVM does not provide SHA-256", e);
+		}
+		this.pkceVerifier = verifier;
+		return new GenerateAuthCodeData(parent.getAppID(), scopes, packs, qrCode, challenge, "S256");
 	}
 
 	private List<CCEffectReport> filterReports(boolean force, @NotNull CCEffectReport ... reports) {

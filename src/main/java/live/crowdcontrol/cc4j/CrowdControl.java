@@ -41,19 +41,19 @@ public class CrowdControl {
 	protected final @NotNull String gameID;
 	protected final @NotNull String gamePackID;
 	protected final @NotNull String appID;
-	protected final @NotNull String appSecret;
+	protected final @Nullable String appSecret;
 	protected final @NotNull Path dataFolder;
 	protected @Nullable GamePack gamePack;
 
 	public CrowdControl(@NotNull String gameID,
 						@NotNull String gamePackID,
 						@NotNull String appID,
-						@NotNull String appSecret,
+						@Nullable String appSecret,
 						@NotNull Path dataFolder) {
 		this.gameID = gameID;
 		this.gamePackID = gamePackID;
 		this.appID = appID;
-		this.appSecret = appSecret;
+		this.appSecret = appSecret == null || appSecret.isEmpty() ? null : appSecret;
 		this.dataFolder = dataFolder;
 
 		if (!Files.exists(dataFolder)) {
@@ -65,6 +65,20 @@ public class CrowdControl {
 		}
 
 		loadGamePack();
+	}
+
+	/**
+	 * Creates a client for a public (PKCE) Crowd Control application.
+	 *
+	 * <p>Use this for applications distributed
+	 * to untrusted hosts (community game servers, open-source mods)
+	 * where a bundled secret could be extracted.</p>
+	 */
+	public CrowdControl(@NotNull String gameID,
+						@NotNull String gamePackID,
+						@NotNull String appID,
+						@NotNull Path dataFolder) {
+		this(gameID, gamePackID, appID, null, dataFolder);
 	}
 
 	/**
@@ -96,11 +110,22 @@ public class CrowdControl {
 
 	/**
 	 * Gets the API secret of this game's Crowd Control third-party application.
+	 * Null for public (PKCE) applications.
 	 *
-	 * @return appSecret
+	 * @return appSecret or null
 	 */
-	public @NotNull String getAppSecret() {
+	public @Nullable String getAppSecret() {
 		return appSecret;
+	}
+
+	/**
+	 * Whether this client authenticates as a public (PKCE) application,
+	 * i.e. no application secret is held.
+	 *
+	 * @return true when token exchanges use PKCE instead
+	 */
+	public boolean isPublicClient() {
+		return appSecret == null;
 	}
 
 	/**
