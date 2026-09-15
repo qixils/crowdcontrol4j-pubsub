@@ -34,4 +34,9 @@ public class CallDataMethod<A> {
 	 * Instructs the server to adjust the visibility or usability of an effect in the menu.
 	 */
 	public static final CallDataMethod<CCEffectReport> EFFECT_REPORT = new CallDataMethod<>("effectReport");
+
+	/**
+	 * Informs the server of a notable event that has occurred in the game.
+	 */
+	public static final CallDataMethod<CCGameEvent> GAME_EVENT = new CallDataMethod<>("gameEvent");
 }

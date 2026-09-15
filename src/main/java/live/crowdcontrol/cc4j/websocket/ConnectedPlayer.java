@@ -421,7 +421,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 	}
 
 	@Override
-	public CompletableFuture<Boolean> sendResponse(@NotNull CCEffectResponse response) {
+	public @NotNull CompletableFuture<Boolean> sendResponse(@NotNull CCEffectResponse response) {
 		//noinspection ConstantValue
 		if (response == null) return CompletableFuture.completedFuture(false);
 		if (response.getStatus() == ResponseStatus.DELAY_ESTIMATED) return CompletableFuture.completedFuture(false); // unused
@@ -525,7 +525,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 	}
 
 	@Override
-	public CompletableFuture<Boolean> sendReport(@NotNull CCEffectReport @NotNull ... reports) {
+	public @NotNull CompletableFuture<Boolean> sendReport(@NotNull CCEffectReport @NotNull ... reports) {
 		if (!canSendRPC()) return CompletableFuture.completedFuture(false); // let's not update reports if we can't!!!
 
 		List<CCEffectReport> reportList = filterReports(false, reports);
@@ -534,6 +534,18 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 		return sendRPC(new CallData<>(
 			CallDataMethod.EFFECT_REPORT,
 			reportList
+		));
+	}
+
+	@Override
+	public @NotNull CompletableFuture<Boolean> sendGameEvent(@NotNull CCGameEvent @NotNull ... events) {
+		if (!canSendRPC()) return CompletableFuture.completedFuture(false);
+		if (events.length == 0) return CompletableFuture.completedFuture(false);
+
+		List<CCGameEvent> list = List.of(events);
+		return sendRPC(new CallData<>(
+			CallDataMethod.GAME_EVENT,
+			list
 		));
 	}
 

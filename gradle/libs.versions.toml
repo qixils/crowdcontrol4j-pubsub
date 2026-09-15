@@ -3,7 +3,8 @@
 
 [versions]
 junit-jupiter = "5.11.2"
-jackson = "2.18.0"
+jackson = "2.22.2"
+jackson-major = "2.22" # -annotations no longer utilizes patch number
 annotations = "26.0.1"
 geantyref = "2.0.0"
 slf4j = "2.0.17"
@@ -12,7 +13,7 @@ record-builder="51"
 [libraries]
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
 jackson-core = { module = "com.fasterxml.jackson.core:jackson-core", version.ref="jackson" }
-jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref="jackson" }
+jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref="jackson-major" }
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref="jackson" }
 annotations = { module = "org.jetbrains:annotations", version.ref = "annotations" }
 geantyref = { module = "io.leangen.geantyref:geantyref", version.ref = "geantyref" }

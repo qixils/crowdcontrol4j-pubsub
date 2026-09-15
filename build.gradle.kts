@@ -7,7 +7,7 @@
 
 // name is set in settings.gradle.kts lol
 group = "dev.qixils.cc4j"
-version = "1.3.0"
+version = "1.3.1"
 
 plugins {
     // Apply the java-library plugin for API and implementation separation.
@@ -65,7 +65,7 @@ mavenPublishing {
         name.set("crowdcontrol4j pubsub")
         description.set("An implementation of the Crowd Control PubSub WebSocket protocol for Java 21+")
         inceptionYear.set("2024")
-        url.set("http://github.com/qixils/crowdcontrol4j-pubsub")
+        url.set("https://github.com/qixils/crowdcontrol4j-pubsub")
         licenses {
             license {
                 name.set("Functional Source License, Version 1.1, Apache 2.0 Future License")
@@ -81,7 +81,7 @@ mavenPublishing {
             }
         }
         scm {
-            url.set("http://github.com/qixils/crowdcontrol4j-pubsub/")
+            url.set("https://github.com/qixils/crowdcontrol4j-pubsub/")
             connection.set("scm:git:git://github.com/qixils/crowdcontrol4j-pubsub.git")
             developerConnection.set("scm:git:git://github.com/qixils/crowdcontrol4j-pubsub.git")
         }

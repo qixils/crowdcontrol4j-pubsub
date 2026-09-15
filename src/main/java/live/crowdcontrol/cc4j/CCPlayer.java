@@ -4,6 +4,7 @@ import live.crowdcontrol.cc4j.util.EventManager;
 import live.crowdcontrol.cc4j.websocket.UserToken;
 import live.crowdcontrol.cc4j.websocket.data.CCEffectReport;
 import live.crowdcontrol.cc4j.websocket.data.CCEffectResponse;
+import live.crowdcontrol.cc4j.websocket.data.CCGameEvent;
 import live.crowdcontrol.cc4j.websocket.http.CustomEffectsOperation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -72,6 +73,7 @@ public interface CCPlayer {
 	 * @param response effect response
 	 * @return whether the response could be sent
 	 */
+	@NotNull
 	CompletableFuture<Boolean> sendResponse(@NotNull CCEffectResponse response);
 
 	/**
@@ -80,7 +82,17 @@ public interface CCPlayer {
 	 * @param reports effect reports
 	 * @return whether the report could be sent
 	 */
+	@NotNull
 	CompletableFuture<Boolean> sendReport(@NotNull CCEffectReport @NotNull ... reports);
+
+	/**
+	 * Sends one or more game events to the WebSocket.
+	 *
+	 * @param events game events
+	 * @return whether the event could be sent
+	 */
+	@NotNull
+	CompletableFuture<Boolean> sendGameEvent(@NotNull CCGameEvent @NotNull ... events);
 
 	/**
 	 * Attempts to set the specified custom effects.
