@@ -67,6 +67,9 @@ public class ConnectedPlayer implements CCPlayer {
 	protected long disconnectTriggeredAt = 0L;
 	protected ScheduledFuture<?> keepAlive = null;
 	protected ScheduledFuture<?> timeout = null;
+	protected ScheduledFuture<?> authCodeRetry = null;
+	protected int authCodeRetryDelay = 1;
+	protected static final int MAX_AUTH_CODE_RETRY_DELAY = 60;
 
 	static {
 		GSON = new GsonBuilder()
@@ -122,6 +125,7 @@ public class ConnectedPlayer implements CCPlayer {
 		});
 		this.eventManager.registerEventConsumer(CCEventType.DISCONNECTED, data -> {
 			clearKeepAlive();
+			cancelAuthCodeRetry();
 			if (timeout != null) {
 				timeout.cancel(false);
 				timeout = null;
@@ -142,6 +146,7 @@ public class ConnectedPlayer implements CCPlayer {
 			// we're successfully connected!
 			onConnectionSuccessful();
 			this.authCode = payload.code();
+			authCodeRetryDelay = 1;
 			if (pendingAuthCode != null) {
 				pendingAuthCode.complete(null);
 				pendingAuthCode = null;
@@ -154,7 +159,7 @@ public class ConnectedPlayer implements CCPlayer {
 				if (verifier == null) {
 					log.warn("Auth code was redeemed but no PKCE verifier is held; requesting a new code");
 					this.eventManager.dispatch(CCEventType.MESSAGE, new CCMessage(CCMessage.Level.ERROR, "Failed to authenticate account"));
-					send(new SocketRequest(GenerateAuthCodeData.ACTION, createAuthCodeData(null, null, null)));
+					scheduleAuthCodeRetry();
 					return;
 				}
 				tokenData = AuthApplicationTokenData.forPkce(parent.getAppID(), payload.code(), verifier);
@@ -163,7 +168,7 @@ public class ConnectedPlayer implements CCPlayer {
 				if (appSecret == null) {
 					log.warn("Auth code was redeemed but for an authenticated client; requesting a new code");
 					this.eventManager.dispatch(CCEventType.MESSAGE, new CCMessage(CCMessage.Level.ERROR, "Failed to authenticate account"));
-					send(new SocketRequest(GenerateAuthCodeData.ACTION, createAuthCodeData(null, null, null)));
+					scheduleAuthCodeRetry();
 					return;
 				}
 				tokenData = new AuthApplicationTokenData(parent.getAppID(), payload.code(), appSecret);
@@ -192,9 +197,19 @@ public class ConnectedPlayer implements CCPlayer {
 			});
 		});
 		this.eventManager.registerEventConsumer(CCEventType.ERRORED_AUTH_CODE, payload -> {
-			log.warn("Failed to redeem auth code for reason {}, generating new one", payload.message());
-			this.eventManager.dispatch(CCEventType.MESSAGE, new CCMessage(CCMessage.Level.ERROR, "Failed to redeem auth code"));
-			send(new SocketRequest(GenerateAuthCodeData.ACTION, createAuthCodeData(null, null, null)));
+			if (pendingAuthCode != null) {
+				pendingAuthCode.completeExceptionally(new IllegalStateException("Failed to generate auth code: " + payload.message()));
+				pendingAuthCode = null;
+			}
+			if (isFatalAuthCodeError(payload.message())) {
+				// don't retry permanent errors
+				log.error("Failed to generate auth code for reason {}, not retrying", payload.message());
+				this.eventManager.dispatch(CCEventType.MESSAGE, new CCMessage(CCMessage.Level.ERROR, "Failed indefinitely to generate auth code; check for an update for this software"));
+				return;
+			}
+			log.warn("Failed to generate auth code for reason {}, retrying in {} second(s)", payload.message(), authCodeRetryDelay);
+			this.eventManager.dispatch(CCEventType.MESSAGE, new CCMessage(CCMessage.Level.ERROR, "Failed to generate auth code"));
+			scheduleAuthCodeRetry();
 		});
 		this.eventManager.registerEventRunnable(CCEventType.AUTHENTICATED, this::subscribe);
 		this.eventManager.registerEventConsumer(CCEventType.SUBSCRIBED, payload -> {
@@ -208,6 +223,37 @@ public class ConnectedPlayer implements CCPlayer {
 		this.eventManager.registerEventConsumer(CCEventType.EFFECT_FAILURE, payload -> parent.cancelByRequestId(payload.getRequestId()));
 
 		loadToken();
+	}
+
+	/**
+	 * Determines whether an auth code error cannot be fixed by retrying.
+	 *
+	 * @param message error message from the server
+	 * @return whether the error is fatal
+	 */
+	protected static boolean isFatalAuthCodeError(@NotNull String message) {
+		return message.toLowerCase(Locale.US).contains("application not found");
+	}
+
+	/**
+	 * Schedules a new auth code request with exponential backoff.
+	 * Does nothing if a retry is already scheduled.
+	 */
+	protected void scheduleAuthCodeRetry() {
+		if (authCodeRetry != null && !authCodeRetry.isDone()) return;
+		int delay = authCodeRetryDelay;
+		authCodeRetryDelay = Math.min(authCodeRetryDelay * 2, MAX_AUTH_CODE_RETRY_DELAY);
+		authCodeRetry = parent.getTimedEffectPool().schedule(() -> {
+			authCodeRetry = null;
+			if (canSend()) regenerateAuthCode();
+		}, delay, TimeUnit.SECONDS);
+	}
+
+	protected void cancelAuthCodeRetry() {
+		if (authCodeRetry != null) {
+			authCodeRetry.cancel(false);
+			authCodeRetry = null;
+		}
 	}
 
 	private void onConnectionSuccessful() {
