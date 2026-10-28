@@ -1,29 +1,19 @@
 package live.crowdcontrol.cc4j.websocket.http;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JacksonException;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.ObjectCodec;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+import com.google.gson.*;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
+import java.lang.reflect.Type;
 import java.util.Objects;
 
-@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 public final class CustomEffectDuration {
 	private final double value;
 	private final @Nullable Boolean immutable;
 
-	@JsonCreator
 	public CustomEffectDuration(
-		@JsonProperty("value") double value,
-		@JsonProperty("immutable") @Nullable Boolean immutable
+		double value,
+		@Nullable Boolean immutable
 	) {
 		this.value = value;
 		this.immutable = immutable;
@@ -64,24 +54,19 @@ public final class CustomEffectDuration {
 
 
 	@ApiStatus.Internal
-	public static class CustomEffectDurationAdapter extends StdDeserializer<CustomEffectDuration> {
-		public CustomEffectDurationAdapter() {
-			super(CustomEffectDuration.class);
-		}
-
+	public static class CustomEffectDurationAdapter implements JsonDeserializer<CustomEffectDuration> {
 		@Override
-		public CustomEffectDuration deserialize(JsonParser parser, DeserializationContext context) throws IOException, JacksonException {
+		public CustomEffectDuration deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
 			double value;
 			Boolean immutable = null;
-			if (parser.isExpectedStartObjectToken()) {
-				ObjectCodec codec = parser.getCodec();
-				JsonNode node = codec.readTree(parser);
+			if (json.isJsonObject()) {
+				JsonObject node = json.getAsJsonObject();
 
-				value = node.get("value").asDouble();
-				JsonNode immutableNode = node.get("immutable");
-				immutable = immutableNode != null && !immutableNode.isNull() ? immutableNode.asBoolean(false) : null; // idk why the node can be null
+				value = node.get("value").getAsDouble();
+				JsonElement immutableNode = node.get("immutable");
+				immutable = immutableNode != null && !immutableNode.isJsonNull() ? immutableNode.getAsBoolean() : null;
 			} else {
-				value = parser.getDoubleValue();
+				value = json.getAsDouble();
 			}
 			return new CustomEffectDuration(value, immutable);
 		}

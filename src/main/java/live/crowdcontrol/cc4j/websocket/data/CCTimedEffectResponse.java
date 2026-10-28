@@ -1,7 +1,5 @@
 package live.crowdcontrol.cc4j.websocket.data;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
@@ -11,17 +9,6 @@ import java.util.UUID;
  */
 public class CCTimedEffectResponse extends CCEffectResponse {
 	protected long timeRemaining;
-
-	@JsonCreator
-	CCTimedEffectResponse(@JsonProperty("id") @NotNull UUID id,
-						  @JsonProperty("stamp") int stamp,
-						  @JsonProperty("request") @NotNull UUID request,
-						  @JsonProperty("message") @NotNull String message,
-						  @JsonProperty("status") @NotNull ResponseStatus status,
-						  long timeRemaining) {
-		super(id, stamp, request, message, status);
-		this.timeRemaining = timeRemaining;
-	}
 
 	/**
 	 * Creates a response.

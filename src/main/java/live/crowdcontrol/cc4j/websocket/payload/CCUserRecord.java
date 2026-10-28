@@ -1,7 +1,5 @@
 package live.crowdcontrol.cc4j.websocket.payload;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import live.crowdcontrol.cc4j.IUserRecord;
 import org.intellij.lang.annotations.Pattern;
 import org.intellij.lang.annotations.Subst;
@@ -30,12 +28,11 @@ public class CCUserRecord implements IUserRecord {
 	 * @param originID profile ID
 	 * @param image    profile picture URL
 	 */
-	@JsonCreator
-	public CCUserRecord(@JsonProperty("ccUID") @Pattern(CCUID_PATTERN) @Subst("ccuid-01j7cnrvpbh5aw45pwpe1vqvdw") @NotNull String ccUID,
-						@JsonProperty("name") @NotNull String name,
-						@JsonProperty("profile") @NotNull ProfileType profile,
-						@JsonProperty("originID") @NotNull String originID,
-						@JsonProperty("image") @NotNull String image) {
+	public CCUserRecord(@Pattern(CCUID_PATTERN) @Subst("ccuid-01j7cnrvpbh5aw45pwpe1vqvdw") @NotNull String ccUID,
+						@NotNull String name,
+						@NotNull ProfileType profile,
+						@NotNull String originID,
+						@NotNull String image) {
 		this.ccUID = ccUID;
 		this.image = image;
 		this.name = name;
@@ -45,7 +42,6 @@ public class CCUserRecord implements IUserRecord {
 
 	@Pattern(CCUID_PATTERN)
 	@Override
-	@JsonProperty("ccUID")
 	public @NotNull String getId() {
 		return ccUID;
 	}
@@ -61,7 +57,6 @@ public class CCUserRecord implements IUserRecord {
 	}
 
 	@Override
-	@JsonProperty("originID")
 	public @NotNull String getOriginId() {
 		return originID;
 	}

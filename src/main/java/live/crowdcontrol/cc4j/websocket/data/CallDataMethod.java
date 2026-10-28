@@ -1,7 +1,5 @@
 package live.crowdcontrol.cc4j.websocket.data;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonValue;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -10,7 +8,6 @@ import org.jetbrains.annotations.NotNull;
 public class CallDataMethod<A> {
 	private final @NotNull String value;
 
-	@JsonCreator
 	public CallDataMethod(@NotNull String value) {
 		this.value = value;
 	}
@@ -20,7 +17,6 @@ public class CallDataMethod<A> {
 	 *
 	 * @return method id
 	 */
-	@JsonValue
 	public @NotNull String getValue() {
 		return value;
 	}

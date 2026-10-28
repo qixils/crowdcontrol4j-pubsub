@@ -1,24 +1,19 @@
 package live.crowdcontrol.cc4j.websocket.http;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.intellij.lang.annotations.Pattern;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
 import java.util.Objects;
 
-@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 public final class CustomEffectsOperation {
 	@Pattern("merge|replace-all|replace-partial")
 	private final @NotNull String mode;
 	private final @NotNull Map<String, CustomEffect> effects;
 
-	@JsonCreator
 	public CustomEffectsOperation(
-		@JsonProperty("mode") @NotNull @Pattern("merge|replace-all|replace-partial") String mode,
-		@JsonProperty("effects") @NotNull Map<String, CustomEffect> effects
+		@NotNull @Pattern("merge|replace-all|replace-partial") String mode,
+		@NotNull Map<String, CustomEffect> effects
 	) {
 		this.mode = mode;
 		this.effects = effects;

@@ -1,7 +1,5 @@
 package live.crowdcontrol.cc4j.websocket.data;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.intellij.lang.annotations.RegExp;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -32,10 +30,9 @@ public class SubscriptionData {
 	 * @param token the token to authenticate with or null
 	 * @param key the overlay key to authenticate with or null
 	 */
-	@JsonCreator
-	public SubscriptionData(@JsonProperty("topics") @NotNull Set<@NotNull String> topics,
-							@JsonProperty("token") @Nullable String token,
-							@JsonProperty("key") @Nullable String key) {
+	public SubscriptionData(@NotNull Set<@NotNull String> topics,
+							@Nullable String token,
+							@Nullable String key) {
 		this.topics = Collections.unmodifiableSet(new HashSet<>(topics));
 		for (String topic : this.topics) {
 			if (topic.matches(TOPIC_PATTERN)) continue;

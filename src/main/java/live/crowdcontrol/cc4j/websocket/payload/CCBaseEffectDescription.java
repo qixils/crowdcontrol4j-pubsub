@@ -1,8 +1,6 @@
 package live.crowdcontrol.cc4j.websocket.payload;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.SerializedName;
 import live.crowdcontrol.cc4j.websocket.http.CustomEffectDuration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -18,7 +16,7 @@ public class CCBaseEffectDescription {
 	protected final @Nullable String note;
 	protected final @Nullable String description;
 	protected final boolean disabled;
-	@JsonProperty("new")
+	@SerializedName("new")
 	protected final boolean isNew;
 	protected final boolean inactive;
 	protected final boolean admin;
@@ -33,21 +31,20 @@ public class CCBaseEffectDescription {
 	// TODO userCooldown
 	// TODO scale
 
-	@JsonCreator
-	public CCBaseEffectDescription(@JsonProperty("name") @NotNull CCName name,
-								   @JsonProperty("image") @Nullable String image,
-								   @JsonProperty("note") @Nullable String note,
-								   @JsonProperty("description") @Nullable String description,
-								   @JsonProperty("disabled") boolean disabled,
-								   @JsonProperty("new") boolean isNew,
-								   @JsonProperty("inactive") boolean inactive,
-								   @JsonProperty("admin") boolean admin,
-								   @JsonProperty("hidden") boolean hidden,
-								   @JsonProperty("unavailable") boolean unavailable,
-								   @JsonProperty("category") @Nullable List<String> category,
-								   @JsonProperty("group") @Nullable List<String> group,
-								   @JsonProperty("tags") @Nullable List<String> tags,
-								   @JsonProperty("duration") @Nullable CustomEffectDuration duration) {
+	public CCBaseEffectDescription(@NotNull CCName name,
+								   @Nullable String image,
+								   @Nullable String note,
+								   @Nullable String description,
+								   boolean disabled,
+								   boolean isNew,
+								   boolean inactive,
+								   boolean admin,
+								   boolean hidden,
+								   boolean unavailable,
+								   @Nullable List<String> category,
+								   @Nullable List<String> group,
+								   @Nullable List<String> tags,
+								   @Nullable CustomEffectDuration duration) {
 		this.name = name;
 		this.image = image;
 		this.note = note;
@@ -141,7 +138,6 @@ public class CCBaseEffectDescription {
 	 *
 	 * @return is admin-only
 	 */
-	@JsonProperty("admin")
 	public boolean isAdminOnly() {
 		return admin;
 	}
@@ -170,7 +166,6 @@ public class CCBaseEffectDescription {
 	 *
 	 * @return groups
 	 */
-	@JsonProperty("category")
 	public @Nullable List<String> getCategories() {
 		return category;
 	}
@@ -182,7 +177,6 @@ public class CCBaseEffectDescription {
 	 *
 	 * @return groups
 	 */
-	@JsonProperty("group")
 	public @Nullable List<String> getGroups() {
 		return group;
 	}
@@ -208,7 +202,6 @@ public class CCBaseEffectDescription {
 		return duration;
 	}
 
-	@JsonIgnore
 	public long getDurationMillis() {
 		return duration == null ? 0 : Math.round(duration.value() * 1000d);
 	}

@@ -1,7 +1,7 @@
 package live.crowdcontrol.cc4j;
 
-import io.leangen.geantyref.TypeToken;
 import live.crowdcontrol.cc4j.util.CloseData;
+import live.crowdcontrol.cc4j.util.TypeToken;
 import live.crowdcontrol.cc4j.websocket.data.CCEffectResponse;
 import live.crowdcontrol.cc4j.websocket.http.GameSessionStartPayload;
 import live.crowdcontrol.cc4j.websocket.http.GameSessionStopPayload;

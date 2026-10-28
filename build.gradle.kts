@@ -7,7 +7,7 @@
 
 // name is set in settings.gradle.kts lol
 group = "dev.qixils.cc4j"
-version = "1.4.0"
+version = "1.5.0-SNAPSHOT"
 
 plugins {
     // Apply the java-library plugin for API and implementation separation.
@@ -25,12 +25,9 @@ dependencies {
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
-    implementation(libs.jackson.core)
-    implementation(libs.jackson.annotations)
-    implementation(libs.jackson.databind)
+    implementation(libs.gson)
     implementation(libs.slf4j)
     implementation(libs.java.websocket)
-    api(libs.geantyref)
     api(libs.annotations)
 }
 

@@ -1,7 +1,5 @@
 package live.crowdcontrol.cc4j.websocket.payload;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import live.crowdcontrol.cc4j.websocket.http.CustomEffectDuration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -15,23 +13,22 @@ public class CCEffectDescription extends CCBaseEffectDescription {
 	protected final @NotNull String effectID;
 	protected final @NotNull String type;
 
-	@JsonCreator
-	public CCEffectDescription(@JsonProperty("effectID") @NotNull String effectID,
-								   @JsonProperty("type") @NotNull String type,
-								   @JsonProperty("name") @NotNull CCName name,
-								   @JsonProperty("image") @Nullable String image,
-								   @JsonProperty("note") @Nullable String note,
-								   @JsonProperty("description") @Nullable String description,
-								   @JsonProperty("disabled") boolean disabled,
-								   @JsonProperty("new") boolean isNew,
-								   @JsonProperty("inactive") boolean inactive,
-								   @JsonProperty("admin") boolean admin,
-								   @JsonProperty("hidden") boolean hidden,
-								   @JsonProperty("unavailable") boolean unavailable,
-								   @JsonProperty("category") @Nullable List<String> category,
-								   @JsonProperty("group") @Nullable List<String> group,
-								   @JsonProperty("tags") @Nullable List<String> tags,
-								   @JsonProperty("duration") @Nullable CustomEffectDuration duration) {
+	public CCEffectDescription(@NotNull String effectID,
+								   @NotNull String type,
+								   @NotNull CCName name,
+								   @Nullable String image,
+								   @Nullable String note,
+								   @Nullable String description,
+								   boolean disabled,
+								   boolean isNew,
+								   boolean inactive,
+								   boolean admin,
+								   boolean hidden,
+								   boolean unavailable,
+								   @Nullable List<String> category,
+								   @Nullable List<String> group,
+								   @Nullable List<String> tags,
+								   @Nullable CustomEffectDuration duration) {
 		super(name, image, note, description, disabled, isNew, inactive, admin, hidden, unavailable, category, group, tags, duration);
 		this.effectID = effectID;
 		this.type = type;
@@ -44,7 +41,6 @@ public class CCEffectDescription extends CCBaseEffectDescription {
 	 *
 	 * @return effectID
 	 */
-	@JsonProperty("effectID")
 	public @NotNull String getEffectId() {
 		return effectID;
 	}

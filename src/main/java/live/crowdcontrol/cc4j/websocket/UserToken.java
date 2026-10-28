@@ -1,7 +1,6 @@
 package live.crowdcontrol.cc4j.websocket;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.SerializedName;
 import live.crowdcontrol.cc4j.IUserRecord;
 import live.crowdcontrol.cc4j.websocket.payload.ProfileType;
 import org.intellij.lang.annotations.Pattern;
@@ -22,6 +21,7 @@ public class UserToken implements IUserRecord {
 	@Subst("ccuid-01j7cnrvpbh5aw45pwpe1vqvdw")
 	private final @NotNull String ccUID;
 	private final @NotNull String originID;
+	@SerializedName(value = "profileType", alternate = "profile")
 	private final @NotNull ProfileType profile;
 	private final @NotNull String name;
 	private final @NotNull List<@NotNull String> roles;
@@ -29,17 +29,16 @@ public class UserToken implements IUserRecord {
 	private final long exp;
 	private final @NotNull String ver;
 
-	@JsonCreator
-	public UserToken(@JsonProperty("type") @NotNull String type,
-					 @JsonProperty("jti") @NotNull String jti,
-					 @JsonProperty("ccUID") @Pattern(CCUID_PATTERN) @Subst("ccuid-01j7cnrvpbh5aw45pwpe1vqvdw") @NotNull String ccUID,
-					 @JsonProperty("originID") @NotNull String originID,
-					 @JsonProperty("profileType") @NotNull ProfileType profile,
-					 @JsonProperty("name") @NotNull String name,
-					 @JsonProperty("roles") @NotNull List<@NotNull String> roles,
-					 @JsonProperty("app") @Nullable UserTokenApplication app,
-					 @JsonProperty("exp") long exp,
-					 @JsonProperty("ver") @NotNull String ver) {
+	public UserToken(@NotNull String type,
+					 @NotNull String jti,
+					 @Pattern(CCUID_PATTERN) @Subst("ccuid-01j7cnrvpbh5aw45pwpe1vqvdw") @NotNull String ccUID,
+					 @NotNull String originID,
+					 @NotNull ProfileType profile,
+					 @NotNull String name,
+					 @NotNull List<@NotNull String> roles,
+					 @Nullable UserTokenApplication app,
+					 long exp,
+					 @NotNull String ver) {
 		this.type = type;
 		this.jti = jti;
 		this.ccUID = ccUID;
@@ -62,7 +61,6 @@ public class UserToken implements IUserRecord {
 
 	@Pattern(CCUID_PATTERN)
 	@Override
-	@JsonProperty("ccUID")
 	public @NotNull String getId() {
 		return ccUID;
 	}
@@ -78,7 +76,6 @@ public class UserToken implements IUserRecord {
 	}
 
 	@Override
-	@JsonProperty("originID")
 	public @NotNull String getOriginId() {
 		return originID;
 	}

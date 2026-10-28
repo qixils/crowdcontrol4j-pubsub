@@ -1,25 +1,20 @@
 package live.crowdcontrol.cc4j.websocket.http;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 import java.util.Objects;
 
-@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 public final class CustomEffectParameter {
 	private final @NotNull String type;
 	private final @NotNull String name;
 	private final @Nullable Map<String, CustomEffectParameterOption> options;
 
-	@JsonCreator
 	public CustomEffectParameter(
-		@JsonProperty("type") @NotNull String type,
-		@JsonProperty("name") @NotNull String name,
-		@JsonProperty("options") @Nullable Map<String, CustomEffectParameterOption> options
+		@NotNull String type,
+		@NotNull String name,
+		@Nullable Map<String, CustomEffectParameterOption> options
 	) {
 		this.type = type;
 		this.name = name;

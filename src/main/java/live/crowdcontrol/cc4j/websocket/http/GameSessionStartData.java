@@ -1,7 +1,5 @@
 package live.crowdcontrol.cc4j.websocket.http;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import live.crowdcontrol.cc4j.websocket.data.CCEffectReport;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -21,9 +19,8 @@ public class GameSessionStartData {
 	 * @param gamePackID ID of your game pack
 	 * @param effectReportArgs optional effect reports
 	 */
-	@JsonCreator
-	public GameSessionStartData(@JsonProperty("gamePackID") @NotNull String gamePackID,
-								@JsonProperty("effectReportArgs") @Nullable List<CCEffectReport> effectReportArgs) {
+	public GameSessionStartData(@NotNull String gamePackID,
+								@Nullable List<CCEffectReport> effectReportArgs) {
 		this.gamePackID = gamePackID;
 		this.effectReportArgs = effectReportArgs;
 	}
@@ -43,7 +40,6 @@ public class GameSessionStartData {
 	 *
 	 * @return gamePackID
 	 */
-	@JsonProperty("gamePackID")
 	public @NotNull String getGamePackId() {
 		return gamePackID;
 	}
@@ -53,7 +49,6 @@ public class GameSessionStartData {
 	 *
 	 * @return effect reports
 	 */
-	@JsonProperty("effectReportArgs")
 	public @Nullable List<CCEffectReport> getEffectReportArgs() {
 		return effectReportArgs;
 	}

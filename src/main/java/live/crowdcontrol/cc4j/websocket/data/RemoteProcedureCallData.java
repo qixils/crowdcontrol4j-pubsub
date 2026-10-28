@@ -1,7 +1,5 @@
 package live.crowdcontrol.cc4j.websocket.data;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -17,9 +15,8 @@ public class RemoteProcedureCallData {
 	 * @param token the token used to authenticate
 	 * @param call the data of the call
 	 */
-	@JsonCreator
-	public RemoteProcedureCallData(@JsonProperty("token") @NotNull String token,
-								   @JsonProperty("call") @NotNull CallData<?> call) {
+	public RemoteProcedureCallData(@NotNull String token,
+								   @NotNull CallData<?> call) {
 		this.token = token;
 		this.call = call;
 	}

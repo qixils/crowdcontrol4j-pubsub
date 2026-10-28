@@ -1,7 +1,5 @@
 package live.crowdcontrol.cc4j.websocket.data;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -22,9 +20,8 @@ public class CCGameEvent {
 	 * @param id   Event internal ID
 	 * @param args Arguments if applicable
 	 */
-	@JsonCreator
-    public CCGameEvent(@JsonProperty("id") @NotNull String id,
-                       @JsonProperty("args") @Nullable Map<@NotNull String, @NotNull Object> args) {
+    public CCGameEvent(@NotNull String id,
+                       @Nullable Map<@NotNull String, @NotNull Object> args) {
 		this.id = id;
 		this.args = (args == null || args.isEmpty()) ? null : Collections.unmodifiableMap(new HashMap<>(args));
 	}

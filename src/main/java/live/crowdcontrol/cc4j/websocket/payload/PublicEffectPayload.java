@@ -1,6 +1,5 @@
 package live.crowdcontrol.cc4j.websocket.payload;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -25,14 +24,14 @@ public class PublicEffectPayload {
 	// gamePack
 	// parameters
 
-	public PublicEffectPayload(@JsonProperty("requestID") @NotNull UUID requestID,
-							   @JsonProperty("timestamp") long timestamp,
-							   @JsonProperty("effect") @NotNull CCEffectDescription effect,
-							   @JsonProperty("target") @NotNull CCUserRecord target,
-							   @JsonProperty("origin") @Nullable CCUserRecord origin,
-							   @JsonProperty("requester") @Nullable CCUserRecord requester,
-							   @JsonProperty("anonymous") boolean anonymous,
-							   @JsonProperty("quantity") int quantity) {
+	public PublicEffectPayload(@NotNull UUID requestID,
+							   long timestamp,
+							   @NotNull CCEffectDescription effect,
+							   @NotNull CCUserRecord target,
+							   @Nullable CCUserRecord origin,
+							   @Nullable CCUserRecord requester,
+							   boolean anonymous,
+							   int quantity) {
 		this.requestID = requestID;
 		this.timestamp = timestamp;
 		this.effect = effect;
@@ -48,7 +47,6 @@ public class PublicEffectPayload {
 	 *
 	 * @return requestID
 	 */
-	@JsonProperty("requestID")
 	public @NotNull UUID getRequestId() {
 		return requestID;
 	}

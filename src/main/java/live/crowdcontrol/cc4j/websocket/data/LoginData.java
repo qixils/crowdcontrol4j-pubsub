@@ -1,7 +1,5 @@
 package live.crowdcontrol.cc4j.websocket.data;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.intellij.lang.annotations.Pattern;
 import org.intellij.lang.annotations.RegExp;
 import org.intellij.lang.annotations.Subst;
@@ -28,9 +26,8 @@ public class LoginData {
 	 * @param appID the ID of the application
 	 * @param code the code to log in with, typically conforming to {@link #CODE_PATTERN}
 	 */
-	@JsonCreator
-	public LoginData(@JsonProperty("appID") @NotNull String appID,
-					 @JsonProperty("code") @Pattern(CODE_PATTERN) @Subst("BCDFGH") @NotNull String code) {
+	public LoginData(@NotNull String appID,
+					 @Pattern(CODE_PATTERN) @Subst("BCDFGH") @NotNull String code) {
 		if (!code.matches(CODE_PATTERN))
 			log.warn("Code {} may be invalid; fails to match expected pattern", code);
 

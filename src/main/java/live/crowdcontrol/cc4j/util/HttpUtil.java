@@ -1,6 +1,5 @@
 package live.crowdcontrol.cc4j.util;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import live.crowdcontrol.cc4j.CrowdControl;
 import live.crowdcontrol.cc4j.ServerURLs;
 import org.jetbrains.annotations.NotNull;
@@ -8,10 +7,8 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
+import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -19,7 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
-import static live.crowdcontrol.cc4j.websocket.ConnectedPlayer.JACKSON;
+import static live.crowdcontrol.cc4j.websocket.ConnectedPlayer.GSON;
 
 public class HttpUtil {
 	public static final @NotNull URL OPEN_API_URL;
@@ -56,9 +53,9 @@ public class HttpUtil {
 				if (data != null) {
 					con.setRequestProperty("Accept", "application/json");
 					con.setDoOutput(true);
-					try (OutputStream os = con.getOutputStream()) {
-						log.debug("Outputting to {}: {}", spec, JACKSON.writeValueAsString(data));
-						JACKSON.writeValue(os, data);
+					try (Writer writer = new OutputStreamWriter(con.getOutputStream(), StandardCharsets.UTF_8)) {
+						log.debug("Outputting to {}: {}", spec, GSON.toJson(data));
+						GSON.toJson(data, writer);
 					}
 				}
 				T out = output.apply(con.getInputStream());
@@ -86,27 +83,25 @@ public class HttpUtil {
 		}
 	}
 
-	private <T> @NotNull Function<InputStream, T> createOutputFunction(@NotNull TypeReference<T> output) {
+	private <T> @NotNull Function<InputStream, T> createOutputFunction(@NotNull Type output) {
 		return input -> {
-			try {
-				return JACKSON.readValue(input, output);
+			try (Reader reader = new InputStreamReader(input, StandardCharsets.UTF_8)) {
+				return GSON.fromJson(reader, output);
 			} catch (IOException e) {
 				throw new RuntimeException(e);
 			}
 		};
+	}
+
+	private <T> @NotNull Function<InputStream, T> createOutputFunction(@NotNull TypeToken<T> output) {
+		return createOutputFunction(output.getType());
 	}
 
 	private <T> @NotNull Function<InputStream, T> createOutputFunction(@NotNull Class<T> output) {
-		return input -> {
-			try {
-				return JACKSON.readValue(input, output);
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			}
-		};
+		return createOutputFunction((Type) output);
 	}
 
-	public <T> @NotNull CompletableFuture<T> apiGet(@NotNull String spec, @NotNull TypeReference<T> output, @Nullable String token) {
+	public <T> @NotNull CompletableFuture<T> apiGet(@NotNull String spec, @NotNull TypeToken<T> output, @Nullable String token) {
 		return apiCall("GET", spec, createOutputFunction(output), token, null);
 	}
 
@@ -118,7 +113,7 @@ public class HttpUtil {
 		return apiCall("GET", spec, this::asString, token, null);
 	}
 
-	public <T> @NotNull CompletableFuture<T> apiPost(@NotNull String spec, @NotNull TypeReference<T> output, @Nullable String token, @Nullable Object data) {
+	public <T> @NotNull CompletableFuture<T> apiPost(@NotNull String spec, @NotNull TypeToken<T> output, @Nullable String token, @Nullable Object data) {
 		return apiCall("POST", spec, createOutputFunction(output), token, data);
 	}
 
@@ -130,7 +125,7 @@ public class HttpUtil {
 		return apiCall("POST", spec, this::asString, token, data);
 	}
 
-	public <T> @NotNull CompletableFuture<T> apiPut(@NotNull String spec, @NotNull TypeReference<T> output, @Nullable String token, @Nullable Object data) {
+	public <T> @NotNull CompletableFuture<T> apiPut(@NotNull String spec, @NotNull TypeToken<T> output, @Nullable String token, @Nullable Object data) {
 		return apiCall("PUT", spec, createOutputFunction(output), token, data);
 	}
 

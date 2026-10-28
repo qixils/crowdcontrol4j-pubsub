@@ -1,7 +1,5 @@
 package live.crowdcontrol.cc4j.websocket.data;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -17,17 +15,6 @@ public class CallData<A> {
 	protected final @NotNull UUID id;
 	protected final @NotNull String method;
 	protected final @NotNull List<@NotNull A> args;
-
-	@JsonCreator
-	CallData(@JsonProperty("type") @NotNull String type,
-			 @JsonProperty("id") @NotNull UUID id,
-			 @JsonProperty("method") @NotNull String method,
-			 @JsonProperty("args") @NotNull List<A> args) {
-		this.type = type;
-		this.id = id;
-		this.method = method;
-		this.args = Collections.unmodifiableList(new ArrayList<>(args));
-	}
 
 	/**
 	 * Creates a new call.

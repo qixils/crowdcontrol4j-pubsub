@@ -1,8 +1,5 @@
 package live.crowdcontrol.cc4j.websocket.data;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
-import com.fasterxml.jackson.annotation.JsonValue;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
@@ -28,7 +25,6 @@ public enum IdentifierType {
 	/**
 	 * The JSON-specified value could not be decoded.
 	 */
-	@JsonEnumDefaultValue
 	UNKNOWN(""),
 	;
 
@@ -52,7 +48,6 @@ public enum IdentifierType {
 	 * @param value JSON string value
 	 * @return result status value
 	 */
-	@JsonCreator
 	public static @NotNull IdentifierType fromValue(@NotNull String value) {
 		return BY_VALUE.getOrDefault(value, UNKNOWN);
 	}
@@ -70,7 +65,6 @@ public enum IdentifierType {
 	 *
 	 * @return json value
 	 */
-	@JsonValue
 	public @NotNull String getValue() {
 		return value;
 	}

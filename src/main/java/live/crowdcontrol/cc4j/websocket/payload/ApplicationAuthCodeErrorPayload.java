@@ -1,19 +1,14 @@
 package live.crowdcontrol.cc4j.websocket.payload;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 
-@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 public final class ApplicationAuthCodeErrorPayload {
 	private final @NotNull String message;
 
-	@JsonCreator
 	public ApplicationAuthCodeErrorPayload(
-		@JsonProperty("message") @NotNull String message
+		@NotNull String message
 	) {
 		this.message = message;
 	}

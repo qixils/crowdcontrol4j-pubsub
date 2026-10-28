@@ -1,6 +1,5 @@
 package live.crowdcontrol.cc4j.websocket.http;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -12,17 +11,16 @@ public class GamePack {
 	private final @NotNull GamePackMeta meta;
 	private final @NotNull GamePackEffects effects;
 
-	public GamePack(@JsonProperty("gamePackID") @NotNull String gamePackID,
-					@JsonProperty("game") @NotNull GamePayload game,
-					@JsonProperty("meta") @NotNull GamePackMeta meta,
-					@JsonProperty("effects") @NotNull GamePackEffects effects) {
+	public GamePack(@NotNull String gamePackID,
+					@NotNull GamePayload game,
+					@NotNull GamePackMeta meta,
+					@NotNull GamePackEffects effects) {
 		this.gamePackID = gamePackID;
 		this.game = game;
 		this.meta = meta;
 		this.effects = effects;
 	}
 
-	@JsonProperty("gamePackID")
 	public @NotNull String getGamePackId() {
 		return gamePackID;
 	}

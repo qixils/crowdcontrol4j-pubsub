@@ -1,7 +1,5 @@
 package live.crowdcontrol.cc4j.websocket.payload;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -15,8 +13,7 @@ public class LoginSuccessPayload {
 	 *
 	 * @param token JWT auth token
 	 */
-	@JsonCreator
-	public LoginSuccessPayload(@JsonProperty("token") @NotNull String token) {
+	public LoginSuccessPayload(@NotNull String token) {
 		this.token = token;
 	}
 

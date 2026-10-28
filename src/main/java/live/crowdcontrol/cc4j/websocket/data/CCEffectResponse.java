@@ -1,7 +1,5 @@
 package live.crowdcontrol.cc4j.websocket.data;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
@@ -15,22 +13,9 @@ import java.util.UUID;
 public abstract class CCEffectResponse {
 	protected final @NotNull UUID id;
 	protected final int stamp;
-	@JsonProperty("request")
 	protected final @NotNull UUID request;
 	protected final @NotNull String message;
 	protected final @NotNull ResponseStatus status;
-
-	CCEffectResponse(@NotNull UUID id,
-					 int stamp,
-					 @NotNull UUID request,
-					 @NotNull String message,
-					 @NotNull ResponseStatus status) {
-		this.id = id;
-		this.request = request;
-		this.stamp = stamp;
-		this.message = message;
-		this.status = status;
-	}
 
 	/**
 	 * Creates a response.
@@ -49,18 +34,6 @@ public abstract class CCEffectResponse {
 		this.message = message;
 	}
 
-	@JsonCreator
-	CCEffectResponse create(@JsonProperty("id") @NotNull UUID id,
-							@JsonProperty("stamp") int stamp,
-							@JsonProperty("request") @NotNull UUID request,
-							@JsonProperty("message") @NotNull String message,
-							@JsonProperty("status") @NotNull ResponseStatus status,
-							@JsonProperty("timeRemaining") int timeRemaining) {
-		return status.isTimed()
-			? new CCTimedEffectResponse(id, stamp, request, message, status, timeRemaining)
-			: new CCInstantEffectResponse(id, stamp, request, message, status);
-	}
-
 	/**
 	 * Gets the randomly generated ID of the argument.
 	 *
@@ -75,7 +48,6 @@ public abstract class CCEffectResponse {
 	 *
 	 * @return request ID
 	 */
-	@JsonProperty("request")
 	public @NotNull UUID getRequestId() {
 		return request;
 	}
@@ -85,7 +57,6 @@ public abstract class CCEffectResponse {
 	 *
 	 * @return unix epoch seconds timestamp
 	 */
-	@JsonProperty("stamp")
 	public int getTimestamp() {
 		return stamp;
 	}

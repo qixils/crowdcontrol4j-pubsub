@@ -1,19 +1,14 @@
 package live.crowdcontrol.cc4j.websocket.http;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 
-@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 public final class CustomEffectParameterOption {
 	private final @NotNull String name;
 
-	@JsonCreator
 	public CustomEffectParameterOption(
-		@JsonProperty("name") @NotNull String name
+		@NotNull String name
 	) {
 		this.name = name;
 	}

@@ -1,13 +1,12 @@
 package live.crowdcontrol.cc4j.websocket;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonIOException;
 import live.crowdcontrol.cc4j.*;
 import live.crowdcontrol.cc4j.util.CloseData;
 import live.crowdcontrol.cc4j.util.EventManager;
+import live.crowdcontrol.cc4j.util.GsonAdapters;
 import live.crowdcontrol.cc4j.util.TokenUtils;
 import live.crowdcontrol.cc4j.websocket.data.*;
 import live.crowdcontrol.cc4j.websocket.http.*;
@@ -46,7 +45,7 @@ import java.util.stream.Stream;
  */
 @ApiStatus.Internal
 public class ConnectedPlayer implements CCPlayer {
-	public static final @NotNull ObjectMapper JACKSON;
+	public static final @NotNull Gson GSON;
 	protected static final @NotNull Logger log = LoggerFactory.getLogger("CrowdControl/ConnectedPlayer");
 	protected final ReentrantLock lock = new ReentrantLock();
 	protected final @NotNull Set<String> subscriptions = new HashSet<>();
@@ -70,14 +69,26 @@ public class ConnectedPlayer implements CCPlayer {
 	protected ScheduledFuture<?> timeout = null;
 
 	static {
-		ObjectMapper mapper = new ObjectMapper();
-		mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-		mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-		SimpleModule module = new SimpleModule("CrowdControlSerializers");
-		module.addDeserializer(CCName.class, new CCName.CCNameAdapter());
-		module.addDeserializer(CustomEffectDuration.class, new CustomEffectDuration.CustomEffectDurationAdapter());
-		mapper.registerModule(module);
-		JACKSON = mapper;
+		GSON = new GsonBuilder()
+			.disableHtmlEscaping()
+			.registerTypeAdapter(CCName.class, new CCName.CCNameAdapter())
+			.registerTypeAdapter(CustomEffectDuration.class, new CustomEffectDuration.CustomEffectDurationAdapter())
+			.registerTypeAdapter(IdentifierType.class, GsonAdapters.stringValued(IdentifierType::getValue, IdentifierType::fromValue))
+			.registerTypeAdapter(ReportStatus.class, GsonAdapters.stringValued(ReportStatus::getValue, ReportStatus::fromValue))
+			.registerTypeAdapter(ResponseStatus.class, GsonAdapters.stringValued(ResponseStatus::getValue, ResponseStatus::fromValue))
+			.registerTypeAdapter(ProfileType.class, GsonAdapters.stringValued(ProfileType::getValue, ProfileType::fromValue))
+			.registerTypeHierarchyAdapter(CallDataMethod.class, GsonAdapters.<CallDataMethod<?>>stringValued(CallDataMethod::getValue, CallDataMethod::new))
+			.registerTypeAdapterFactory(GsonAdapters.rebuilding(PublicEffectPayload.class, p -> new PublicEffectPayload(
+				p.getRequestId(), p.getTimestamp(), p.getEffect(), p.getTarget(), p.getOrigin(), p.getRequester(), p.isAnonymous(), p.getQuantity()
+			)))
+			.registerTypeAdapterFactory(GsonAdapters.rebuilding(GameSessionStartPayload.class, p -> new GameSessionStartPayload(
+				p.getGameSessionId(), p.getCreatedAt()
+			)))
+			.registerTypeAdapterFactory(GsonAdapters.rebuilding(SubscriptionResultPayload.class, p -> new SubscriptionResultPayload(
+				p.getSuccess() == null ? Collections.emptySet() : p.getSuccess(),
+				p.getFailure() == null ? Collections.emptySet() : p.getFailure()
+			)))
+			.create();
 	}
 
 	// WebSocket Impl
@@ -284,19 +295,19 @@ public class ConnectedPlayer implements CCPlayer {
 	protected void onText(String message) {
 		try {
 //			log.info("Received message {}", message);
-			SocketEvent event = JACKSON.readValue(message, SocketEvent.class);
+			SocketEvent event = GSON.fromJson(message, SocketEvent.class);
 			switch (event.type) {
 				case "application-auth-code":
-					eventManager.dispatch(CCEventType.GENERATED_AUTH_CODE, JACKSON.treeToValue(event.payload, ApplicationAuthCodePayload.class));
+					eventManager.dispatch(CCEventType.GENERATED_AUTH_CODE, GSON.fromJson(event.payload, ApplicationAuthCodePayload.class));
 					break;
 				case "application-auth-code-error":
-					eventManager.dispatch(CCEventType.ERRORED_AUTH_CODE, JACKSON.treeToValue(event.payload, ApplicationAuthCodeErrorPayload.class));
+					eventManager.dispatch(CCEventType.ERRORED_AUTH_CODE, GSON.fromJson(event.payload, ApplicationAuthCodeErrorPayload.class));
 					break;
 				case "application-auth-code-redeemed":
-					eventManager.dispatch(CCEventType.REDEEMED_AUTH_CODE, JACKSON.treeToValue(event.payload, ApplicationAuthCodeRedeemedPayload.class));
+					eventManager.dispatch(CCEventType.REDEEMED_AUTH_CODE, GSON.fromJson(event.payload, ApplicationAuthCodeRedeemedPayload.class));
 					break;
 				case "subscription-result":
-					SubscriptionResultPayload subscriptionPayload = JACKSON.treeToValue(event.payload, SubscriptionResultPayload.class);
+					SubscriptionResultPayload subscriptionPayload = GSON.fromJson(event.payload, SubscriptionResultPayload.class);
 					if (subscriptionPayload == null) break;
 					//noinspection ConstantValue
 					subscriptionPayload = new SubscriptionResultPayload(
@@ -307,21 +318,21 @@ public class ConnectedPlayer implements CCPlayer {
 					break;
 				case "effect-request":
 					if (!event.domain.equals("pub")) return;
-					PublicEffectPayload requestPayload = JACKSON.treeToValue(event.payload, PublicEffectPayload.class);
+					PublicEffectPayload requestPayload = GSON.fromJson(event.payload, PublicEffectPayload.class);
 					if (!"game".equals(requestPayload.getEffect().getType())) return;
 					eventManager.dispatch(CCEventType.EFFECT_REQUEST, requestPayload);
 					break;
 				case "effect-failure":
 					if (!event.domain.equals("pub")) return;
-					PublicEffectPayload failurePayload = JACKSON.treeToValue(event.payload, PublicEffectPayload.class);
+					PublicEffectPayload failurePayload = GSON.fromJson(event.payload, PublicEffectPayload.class);
 					if (!"game".equals(failurePayload.getEffect().getType())) return;
 					eventManager.dispatch(CCEventType.EFFECT_FAILURE, failurePayload);
 					break;
 				case "game-session-start":
-//					eventManager.dispatch(CCEventType.SESSION_STARTED, JACKSON.treeToValue(event.payload, GameSessionStartPayload.class));
+//					eventManager.dispatch(CCEventType.SESSION_STARTED, GSON.fromJson(event.payload, GameSessionStartPayload.class));
 					break;
 				case "game-session-stop":
-//					eventManager.dispatch(CCEventType.SESSION_STOPPED, JACKSON.treeToValue(event.payload, GameSessionStopPayload.class));
+//					eventManager.dispatch(CCEventType.SESSION_STOPPED, GSON.fromJson(event.payload, GameSessionStopPayload.class));
 					break;
 				// TODO: handle effect menu sync
 				// TODO: handle errors
@@ -358,8 +369,8 @@ public class ConnectedPlayer implements CCPlayer {
 		return CompletableFuture.supplyAsync(() -> {
 			String message;
 			try {
-				message = JACKSON.writeValueAsString(request);
-			} catch (JsonProcessingException e) {
+				message = GSON.toJson(request);
+			} catch (JsonIOException e) {
 				throw new IllegalArgumentException("Could not encode message", e);
 			}
 
@@ -612,7 +623,7 @@ public class ConnectedPlayer implements CCPlayer {
 			token = split[1];
 		}
 		try {
-			this.userToken = JACKSON.readValue(TokenUtils.decodePayload(token), UserToken.class);
+			this.userToken = GSON.fromJson(TokenUtils.decodePayload(token), UserToken.class);
 
 			if (Instant.ofEpochSecond(this.userToken.getExp()).minus(6, ChronoUnit.HOURS).isBefore(Instant.now())) {
 				log.warn("User {}'s auth token has expired", uuid);

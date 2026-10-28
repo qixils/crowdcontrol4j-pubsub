@@ -1,7 +1,5 @@
 package live.crowdcontrol.cc4j.websocket.payload;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
@@ -16,9 +14,8 @@ public class SubscriptionResultPayload {
 	private final @NotNull Set<@NotNull String> success;
 	private final @NotNull Set<@NotNull String> failure;
 
-	@JsonCreator
-	public SubscriptionResultPayload(@JsonProperty("success") @NotNull Set<@NotNull String> success,
-									 @JsonProperty("failure") @NotNull Set<@NotNull String> failure) {
+	public SubscriptionResultPayload(@NotNull Set<@NotNull String> success,
+									 @NotNull Set<@NotNull String> failure) {
 		this.success = Collections.unmodifiableSet(new HashSet<>(success));
 		this.failure = Collections.unmodifiableSet(new HashSet<>(failure));
 	}

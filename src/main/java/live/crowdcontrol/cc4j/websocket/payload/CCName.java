@@ -1,25 +1,19 @@
 package live.crowdcontrol.cc4j.websocket.payload;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JacksonException;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.ObjectCodec;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+import com.google.gson.*;
+import com.google.gson.annotations.SerializedName;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
+import java.lang.reflect.Type;
 
 /**
  * The name of an object.
  * Encapsulates both the display name and the name for sorting.
  */
 public class CCName implements Comparable<CCName> {
-	@JsonProperty("public")
+	@SerializedName("public")
 	private @NotNull final String displayName;
 	private @Nullable final String sort;
 
@@ -29,9 +23,8 @@ public class CCName implements Comparable<CCName> {
 	 * @param displayName viewer-facing display name
 	 * @param sort name for alphabetical sorting
 	 */
-	@JsonCreator
-	public CCName(@JsonProperty("public") @NotNull String displayName,
-				  @JsonProperty("sort") @Nullable String sort) {
+	public CCName(@NotNull String displayName,
+				  @Nullable String sort) {
 		this.displayName = displayName;
 		this.sort = sort;
 	}
@@ -50,7 +43,6 @@ public class CCName implements Comparable<CCName> {
 	 *
 	 * @return display name
 	 */
-	@JsonProperty("public")
 	public @NotNull String getDisplayName() {
 		return displayName;
 	}
@@ -61,7 +53,6 @@ public class CCName implements Comparable<CCName> {
 	 *
 	 * @return sort name
 	 */
-	@JsonProperty("sort")
 	public @Nullable String getSortValue() {
 		return sort;
 	}
@@ -83,24 +74,19 @@ public class CCName implements Comparable<CCName> {
 	}
 
 	@ApiStatus.Internal
-	public static class CCNameAdapter extends StdDeserializer<CCName> {
-		public CCNameAdapter() {
-			super(CCName.class);
-		}
-
+	public static class CCNameAdapter implements JsonDeserializer<CCName> {
 		@Override
-		public CCName deserialize(JsonParser parser, DeserializationContext context) throws IOException, JacksonException {
+		public CCName deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
 			String displayName;
 			String sortName = null;
-			if (parser.isExpectedStartObjectToken()) {
-				ObjectCodec codec = parser.getCodec();
-				JsonNode node = codec.readTree(parser);
+			if (json.isJsonObject()) {
+				JsonObject node = json.getAsJsonObject();
 
-				displayName = node.get("public").asText();
-				JsonNode sortNode = node.get("sort");
-				sortName = sortNode != null ? sortNode.asText(null) : null; // idk why the node can be null
+				displayName = node.get("public").getAsString();
+				JsonElement sortNode = node.get("sort");
+				sortName = sortNode != null && !sortNode.isJsonNull() ? sortNode.getAsString() : null;
 			} else {
-				displayName = parser.getText();
+				displayName = json.getAsString();
 			}
 			return new CCName(displayName, sortName);
 		}

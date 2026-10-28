@@ -1,25 +1,20 @@
 package live.crowdcontrol.cc4j.websocket;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Objects;
 
-@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 public final class UserTokenApplication {
 	private final @NotNull String appID;
 	private final @NotNull List<@NotNull String> scopes;
 	private final @Nullable List<@NotNull String> packs;
 
-	@JsonCreator
 	public UserTokenApplication(
-		@JsonProperty("appID") @NotNull String appID,
-		@JsonProperty("scopes") @NotNull List<@NotNull String> scopes,
-		@JsonProperty("packs") @Nullable List<@NotNull String> packs
+		@NotNull String appID,
+		@NotNull List<@NotNull String> scopes,
+		@Nullable List<@NotNull String> packs
 	) {
 		this.appID = appID;
 		this.scopes = scopes;

@@ -1,7 +1,5 @@
 package live.crowdcontrol.cc4j.websocket.http;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import live.crowdcontrol.cc4j.websocket.payload.CCName;
 import org.intellij.lang.annotations.Pattern;
 import org.intellij.lang.annotations.RegExp;
@@ -33,23 +31,22 @@ public class GamePayload {
 	private final boolean newUpdate;
 	private final boolean disabled;
 
-	@JsonCreator
-	public GamePayload(@JsonProperty("gameID") @NotNull String gameID,
-					   @JsonProperty("name") @NotNull CCName name,
-					   @JsonProperty("platforms") @NotNull List<String> platforms,
-					   @JsonProperty("releaseDate") @Subst("1970-01-01") @Pattern(DATE_PATTERN) @NotNull String releaseDate,
-					   @JsonProperty("packs") @NotNull List<String> packs,
-					   @JsonProperty("title") @Nullable String title,
-					   @JsonProperty("description") @Nullable String description,
-					   @JsonProperty("image") @Nullable String image,
-					   @JsonProperty("twitch") @Nullable TwitchGameDetails twitch,
-					   @JsonProperty("tags") @Nullable List<String> tags,
-					   @JsonProperty("keywords") @Nullable List<String> keywords,
-					   @JsonProperty("clips") @Nullable List<GameClip> clips,
-					   @JsonProperty("recommended") boolean recommended,
-					   @JsonProperty("earlyAccess") boolean earlyAccess,
-					   @JsonProperty("newUpdate") boolean newUpdate,
-					   @JsonProperty("disabled") boolean disabled) {
+	public GamePayload(@NotNull String gameID,
+					   @NotNull CCName name,
+					   @NotNull List<String> platforms,
+					   @Subst("1970-01-01") @Pattern(DATE_PATTERN) @NotNull String releaseDate,
+					   @NotNull List<String> packs,
+					   @Nullable String title,
+					   @Nullable String description,
+					   @Nullable String image,
+					   @Nullable TwitchGameDetails twitch,
+					   @Nullable List<String> tags,
+					   @Nullable List<String> keywords,
+					   @Nullable List<GameClip> clips,
+					   boolean recommended,
+					   boolean earlyAccess,
+					   boolean newUpdate,
+					   boolean disabled) {
 		this.gameID = gameID;
 		this.name = name;
 		this.platforms = platforms;

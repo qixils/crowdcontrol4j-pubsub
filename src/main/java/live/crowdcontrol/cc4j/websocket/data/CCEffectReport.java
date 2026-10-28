@@ -1,7 +1,5 @@
 package live.crowdcontrol.cc4j.websocket.data;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -15,19 +13,6 @@ public class CCEffectReport {
 	protected final @NotNull IdentifierType identifierType;
 	protected final @NotNull List<@NotNull String> ids;
 	protected final @NotNull ReportStatus status;
-
-	@JsonCreator
-	CCEffectReport(@JsonProperty("id") @NotNull UUID id,
-				   @JsonProperty("stamp") long stamp,
-				   @JsonProperty("identifierType") @NotNull IdentifierType identifierType,
-				   @JsonProperty("ids") @NotNull List<@NotNull String> ids,
-				   @JsonProperty("status") @NotNull ReportStatus status) {
-		this.id = id;
-		this.stamp = stamp;
-		this.identifierType = identifierType;
-		this.ids = ids;
-		this.status = status;
-	}
 
 	/**
 	 * Creates a report.
@@ -95,7 +80,6 @@ public class CCEffectReport {
 	 *
 	 * @return unix epoch seconds timestamp
 	 */
-	@JsonProperty("stamp")
 	public long getTimestamp() {
 		return stamp;
 	}

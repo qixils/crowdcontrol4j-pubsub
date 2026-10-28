@@ -1,7 +1,7 @@
 package live.crowdcontrol.cc4j;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import live.crowdcontrol.cc4j.util.HttpUtil;
+import live.crowdcontrol.cc4j.util.TypeToken;
 import live.crowdcontrol.cc4j.websocket.ConnectedPlayer;
 import live.crowdcontrol.cc4j.websocket.data.CCEffectResponse;
 import live.crowdcontrol.cc4j.websocket.data.CCInstantEffectResponse;
@@ -202,7 +202,7 @@ public class CrowdControl {
 	@NotNull
 	public CompletableFuture<@Nullable GamePack> loadGamePack(@Nullable String token) {
 		String url = String.format("/games/%s/packs", gameID);
-		return httpUtil.apiGet(url, new TypeReference<List<GamePack>>() {
+		return httpUtil.apiGet(url, new TypeToken<List<GamePack>>() {
 		}, token).handleAsync((gamePacks, e) -> {
 			if (e != null) {
 				log.warn("Failed to deserialize game packs", e);

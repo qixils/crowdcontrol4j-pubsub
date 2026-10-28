@@ -1,6 +1,6 @@
 package live.crowdcontrol.cc4j.websocket.http;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.SerializedName;
 import live.crowdcontrol.cc4j.websocket.payload.CCName;
 import org.intellij.lang.annotations.Pattern;
 import org.intellij.lang.annotations.Subst;
@@ -47,7 +47,7 @@ public class GamePackMeta {
 	private final @Nullable List<GamePackFramework> frameworks;
 	private final @Nullable List<GamePackDeveloper> devs;
 	private final @Nullable List<GamePackVersion> supportedVersions;
-	@JsonProperty("new")
+	@SerializedName("new")
 	private final boolean isNew;
 	private final boolean proExclusive;
 	private final boolean patch;
@@ -60,36 +60,36 @@ public class GamePackMeta {
 	private final boolean dynamic;
 	private final boolean initiateFromCrowdControl;
 
-	public GamePackMeta(@JsonProperty("name") @NotNull CCName name,
-						@JsonProperty("releaseDate") @Subst("1970-01-01") @Pattern(DATE_PATTERN) @NotNull String releaseDate,
-						@JsonProperty("guide") @NotNull String guide,
-						@JsonProperty("platform") @NotNull String platform,
-						@JsonProperty("visibility") @NotNull String visibility,
-						@JsonProperty("connector") @NotNull List<String> connector,
-						@JsonProperty("note") @Nullable String note,
-						@JsonProperty("image") @Nullable String image,
-						@JsonProperty("firmware") @Nullable String firmware,
-						@JsonProperty("executable") @Nullable String executable,
-						@JsonProperty("process") @Nullable String process,
-						@JsonProperty("description") @Nullable String description,
-						@JsonProperty("lastStepMessage") @Nullable String lastStepMessage,
-						@JsonProperty("warningMessage") @Nullable String warningMessage,
-						@JsonProperty("emulator") @Nullable String emulator,
-						@JsonProperty("extraArgs") @Nullable List<String> extraArgs,
-						@JsonProperty("frameworks") @Nullable List<GamePackFramework> frameworks,
-						@JsonProperty("devs") @Nullable List<GamePackDeveloper> devs,
-						@JsonProperty("supportedVersions") @Nullable List<GamePackVersion> supportedVersions,
-						@JsonProperty("new") boolean isNew,
-						@JsonProperty("proExclusive") boolean proExclusive,
-						@JsonProperty("patch") boolean patch,
-						@JsonProperty("prelaunch") boolean prelaunch,
-						@JsonProperty("recommended") boolean recommended,
-						@JsonProperty("earlyAccess") boolean earlyAccess,
-						@JsonProperty("disabled") boolean disabled,
-						@JsonProperty("newUpdate") boolean newUpdate,
-						@JsonProperty("guideCheck") boolean guideCheck,
-						@JsonProperty("dynamic") boolean dynamic,
-						@JsonProperty("initiateFromCrowdControl") boolean initiateFromCrowdControl) {
+	public GamePackMeta(@NotNull CCName name,
+						@Subst("1970-01-01") @Pattern(DATE_PATTERN) @NotNull String releaseDate,
+						@NotNull String guide,
+						@NotNull String platform,
+						@NotNull String visibility,
+						@NotNull List<String> connector,
+						@Nullable String note,
+						@Nullable String image,
+						@Nullable String firmware,
+						@Nullable String executable,
+						@Nullable String process,
+						@Nullable String description,
+						@Nullable String lastStepMessage,
+						@Nullable String warningMessage,
+						@Nullable String emulator,
+						@Nullable List<String> extraArgs,
+						@Nullable List<GamePackFramework> frameworks,
+						@Nullable List<GamePackDeveloper> devs,
+						@Nullable List<GamePackVersion> supportedVersions,
+						boolean isNew,
+						boolean proExclusive,
+						boolean patch,
+						boolean prelaunch,
+						boolean recommended,
+						boolean earlyAccess,
+						boolean disabled,
+						boolean newUpdate,
+						boolean guideCheck,
+						boolean dynamic,
+						boolean initiateFromCrowdControl) {
 		this.name = name;
 		this.releaseDate = releaseDate;
 		this.guide = guide;

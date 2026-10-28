@@ -9,9 +9,6 @@ class SocketRequest {
 	public @NotNull String action;
 	public @Nullable Object data;
 
-	SocketRequest() {
-	}
-
 	public SocketRequest(@NotNull String action) {
 		this.action = action;
 	}

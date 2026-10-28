@@ -1,22 +1,17 @@
 package live.crowdcontrol.cc4j.websocket.http;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.Objects;
 
-@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 public final class PutCustomEffectsData {
 	private final @NotNull String gamePackID;
 	private final @NotNull List<CustomEffectsOperation> operations;
 
-	@JsonCreator
 	public PutCustomEffectsData(
-		@JsonProperty("gamePackID") @NotNull String gamePackID,
-		@JsonProperty("operations") @NotNull List<CustomEffectsOperation> operations
+		@NotNull String gamePackID,
+		@NotNull List<CustomEffectsOperation> operations
 	) {
 		this.gamePackID = gamePackID;
 		this.operations = operations;

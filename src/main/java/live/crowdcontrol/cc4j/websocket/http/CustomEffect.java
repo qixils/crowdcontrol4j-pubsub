@@ -1,8 +1,5 @@
 package live.crowdcontrol.cc4j.websocket.http;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import live.crowdcontrol.cc4j.websocket.payload.CCName;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -12,7 +9,6 @@ import java.util.Map;
 import java.util.Objects;
 
 
-@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 public final class CustomEffect {
 	private final @NotNull CCName name;
 	private final int price;
@@ -26,19 +22,18 @@ public final class CustomEffect {
 	private final @Nullable Double userCooldown;
 	private final @Nullable Boolean inactive;
 
-	@JsonCreator
 	public CustomEffect(
-		@JsonProperty("name") @NotNull CCName name,
-		@JsonProperty("price") int price,
-		@JsonProperty("description") @Nullable String description,
-		@JsonProperty("category") @Nullable List<String> category,
-		@JsonProperty("image") @Nullable String image,
-		@JsonProperty("duration") @Nullable CustomEffectDuration duration,
-		@JsonProperty("quantity") @Nullable CustomEffectQuantity quantity,
-		@JsonProperty("parameters") @Nullable Map<String, CustomEffectParameter> parameters,
-		@JsonProperty("sessionCooldown") @Nullable Double sessionCooldown,
-		@JsonProperty("userCooldown") @Nullable Double userCooldown,
-		@JsonProperty("inactive") @Nullable Boolean inactive
+		@NotNull CCName name,
+		int price,
+		@Nullable String description,
+		@Nullable List<String> category,
+		@Nullable String image,
+		@Nullable CustomEffectDuration duration,
+		@Nullable CustomEffectQuantity quantity,
+		@Nullable Map<String, CustomEffectParameter> parameters,
+		@Nullable Double sessionCooldown,
+		@Nullable Double userCooldown,
+		@Nullable Boolean inactive
 	) {
 		if (name == null || price < 1) {
 			throw new IllegalArgumentException("Must provide non-null name and ≥1 price");

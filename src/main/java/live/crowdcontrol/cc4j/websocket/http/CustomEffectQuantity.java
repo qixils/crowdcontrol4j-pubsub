@@ -1,19 +1,14 @@
 package live.crowdcontrol.cc4j.websocket.http;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Objects;
 
-@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 public final class CustomEffectQuantity {
 	private final int min;
 	private final int max;
 
-	@JsonCreator
 	public CustomEffectQuantity(
-		@JsonProperty("min") int min,
-		@JsonProperty("max") int max
+		int min,
+		int max
 	) {
 		this.min = min;
 		this.max = max;

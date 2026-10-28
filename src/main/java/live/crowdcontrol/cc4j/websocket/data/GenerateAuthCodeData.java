@@ -1,15 +1,11 @@
 package live.crowdcontrol.cc4j.websocket.data;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Objects;
 
-@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 public final class GenerateAuthCodeData {
 	public GenerateAuthCodeData(@NotNull String appID) {
 		this(appID, null, null, null, null, null);
@@ -84,14 +80,13 @@ public final class GenerateAuthCodeData {
 	private final @Nullable String codeChallenge;
 	private final @Nullable String codeChallengeMethod;
 
-	@JsonCreator
 	public GenerateAuthCodeData(
-		@JsonProperty("appID") @NotNull String appID,
-		@JsonProperty("scopes") @Nullable List<String> scopes,
-		@JsonProperty("packs") @Nullable List<String> packs,
-		@JsonProperty("qrCode") @Nullable Boolean qrCode,
-		@JsonProperty("codeChallenge") @Nullable String codeChallenge,
-		@JsonProperty("codeChallengeMethod") @Nullable String codeChallengeMethod
+		@NotNull String appID,
+		@Nullable List<String> scopes,
+		@Nullable List<String> packs,
+		@Nullable Boolean qrCode,
+		@Nullable String codeChallenge,
+		@Nullable String codeChallengeMethod
 	) {
 		this.appID = appID;
 		this.scopes = scopes;

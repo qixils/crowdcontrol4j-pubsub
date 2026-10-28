@@ -1,8 +1,5 @@
 package live.crowdcontrol.cc4j.websocket.http;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -12,7 +9,6 @@ import java.util.Objects;
  * Body of the {@code POST /auth/application/token} exchange.
  * Exactly one of {@link #secret()} or {@link #codeVerifier()} must be set.
  */
-@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 public final class AuthApplicationTokenData {
 	private final @NotNull String appID;
 	private final @NotNull String code;
@@ -22,12 +18,11 @@ public final class AuthApplicationTokenData {
 	/**
 	 *
 	 */
-	@JsonCreator
 	public AuthApplicationTokenData(
-		@JsonProperty("appID") @NotNull String appID,
-		@JsonProperty("code") @NotNull String code,
-		@JsonProperty("secret") @Nullable String secret,
-		@JsonProperty("codeVerifier") @Nullable String codeVerifier
+		@NotNull String appID,
+		@NotNull String code,
+		@Nullable String secret,
+		@Nullable String codeVerifier
 	) {
 		this.appID = appID;
 		this.code = code;

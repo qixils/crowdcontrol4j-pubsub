@@ -1,7 +1,5 @@
 package live.crowdcontrol.cc4j.websocket.http;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -20,9 +18,8 @@ public class GameSessionStartPayload {
 	 * @param gameSessionID ID of the game session
 	 * @param createdAt when the session was started
 	 */
-	@JsonCreator
-	public GameSessionStartPayload(@JsonProperty("gameSessionID") @NotNull String gameSessionID,
-								@JsonProperty("createdAt") @Nullable String createdAt) {
+	public GameSessionStartPayload(@NotNull String gameSessionID,
+								@Nullable String createdAt) {
 		this.gameSessionID = gameSessionID;
 		this.createdAt = createdAt == null ? Instant.now().toString() : createdAt;
 	}
@@ -41,7 +38,6 @@ public class GameSessionStartPayload {
 	 *
 	 * @return gameSessionID
 	 */
-	@JsonProperty("gameSessionID")
 	public @NotNull String getGameSessionId() {
 		return gameSessionID;
 	}
