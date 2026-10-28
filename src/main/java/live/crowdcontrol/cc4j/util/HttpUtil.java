@@ -8,13 +8,13 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -23,7 +23,6 @@ import static live.crowdcontrol.cc4j.websocket.ConnectedPlayer.JACKSON;
 
 public class HttpUtil {
 	public static final @NotNull URL OPEN_API_URL;
-	public static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
 	private static final @NotNull Logger log = LoggerFactory.getLogger("CrowdControl/Http");
 
 	static {
@@ -76,8 +75,12 @@ public class HttpUtil {
 
 	private String asString(InputStream stream) {
 		try {
-			byte[] bytes = stream.readAllBytes();
-			return new String(bytes, StandardCharsets.UTF_8);
+			ByteArrayOutputStream out = new ByteArrayOutputStream();
+			byte[] buffer = new byte[8192];
+			int read;
+			while ((read = stream.read(buffer)) != -1)
+				out.write(buffer, 0, read);
+			return new String(out.toByteArray(), StandardCharsets.UTF_8);
 		} catch (Exception e) {
 			throw new RuntimeException("Failed to read as string", e);
 		}

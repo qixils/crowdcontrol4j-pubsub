@@ -414,7 +414,8 @@ public class CrowdControl {
 
 		source.sendResponse(new CCInstantEffectResponse(response.getRequestId(), ResponseStatus.SUCCESS, response.getMessage()));
 
-		if (!(response instanceof CCTimedEffectResponse timedResponse)) return;
+		if (!(response instanceof CCTimedEffectResponse)) return;
+		CCTimedEffectResponse timedResponse = (CCTimedEffectResponse) response;
 
 		// Start timed effect!
 		timedRequests.put(response.getRequestId(), effect);

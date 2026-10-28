@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -24,7 +26,7 @@ public class CCGameEvent {
     public CCGameEvent(@JsonProperty("id") @NotNull String id,
                        @JsonProperty("args") @Nullable Map<@NotNull String, @NotNull Object> args) {
 		this.id = id;
-		this.args = (args == null || args.isEmpty()) ? null : Map.copyOf(args);
+		this.args = (args == null || args.isEmpty()) ? null : Collections.unmodifiableMap(new HashMap<>(args));
 	}
 
 	/**

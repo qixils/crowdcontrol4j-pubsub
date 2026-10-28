@@ -8,11 +8,15 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import live.crowdcontrol.cc4j.*;
 import live.crowdcontrol.cc4j.util.CloseData;
 import live.crowdcontrol.cc4j.util.EventManager;
-import live.crowdcontrol.cc4j.util.HttpUtil;
 import live.crowdcontrol.cc4j.util.TokenUtils;
 import live.crowdcontrol.cc4j.websocket.data.*;
 import live.crowdcontrol.cc4j.websocket.http.*;
 import live.crowdcontrol.cc4j.websocket.payload.*;
+import org.java_websocket.client.WebSocketClient;
+import org.java_websocket.drafts.Draft_6455;
+import org.java_websocket.framing.CloseFrame;
+import org.java_websocket.framing.Framedata;
+import org.java_websocket.handshake.ServerHandshake;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -21,20 +25,16 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.net.URI;
-import java.net.http.WebSocket;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
@@ -45,7 +45,7 @@ import java.util.stream.Stream;
  * A player connected to the server.
  */
 @ApiStatus.Internal
-public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
+public class ConnectedPlayer implements CCPlayer {
 	public static final @NotNull ObjectMapper JACKSON;
 	protected static final @NotNull Logger log = LoggerFactory.getLogger("CrowdControl/ConnectedPlayer");
 	protected final ReentrantLock lock = new ReentrantLock();
@@ -56,8 +56,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 	protected final @NotNull UUID uuid;
 	protected final @NotNull Path tokenPath;
 	protected final @NotNull CrowdControl parent;
-	protected @NotNull StringBuilder pendingText = new StringBuilder();
-	protected @Nullable WebSocket ws;
+	protected @Nullable WebSocketClient ws;
 	protected @Nullable String authCode;
 	protected @Nullable String pkceVerifier;
 	protected @Nullable String token;
@@ -227,26 +226,21 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 			close();
 		}, 60, TimeUnit.SECONDS);
 
-		HttpUtil.HTTP_CLIENT.newWebSocketBuilder()
-			.connectTimeout(Duration.ofSeconds(55))
-			.buildAsync(URI.create(ServerURLs.PUBSUB), this)
-			.handle((ws, e) -> {
-				log.info("Established initial connection");
-				this.ws = ws;
-				if (e != null) {
-					log.error("An error occurred connecting to socket", e);
-					this.eventManager.dispatch(CCEventType.MESSAGE, new CCMessage(CCMessage.Level.WARN, "An error occurred connecting to socket"));
-					emitDisconnect(new CloseData(0, "", true));
-				}
-				return ws;
-			});
+		Client client = new Client();
+		this.ws = client;
+		client.connect();
 	}
 
 	public CompletableFuture<?> close() {
-		if (!canSend()) return CompletableFuture.completedFuture(null);
-		assert ws != null;
-		return ws.sendClose(WebSocket.NORMAL_CLOSURE, "")
-			.whenComplete(($1, $2) -> emitDisconnect(new CloseData(WebSocket.NORMAL_CLOSURE, null, false)));
+		WebSocketClient ws = this.ws;
+		if (ws == null) return CompletableFuture.completedFuture(null);
+		if (!ws.isOpen()) {
+			// abort a pending connection attempt (i.e. a stalled opening handshake); this triggers onClose
+			if (!ws.isClosed()) ws.closeConnection(CloseFrame.NEVER_CONNECTED, "Connection attempt aborted");
+			return CompletableFuture.completedFuture(null);
+		}
+		return CompletableFuture.runAsync(() -> ws.close(CloseFrame.NORMAL))
+			.whenComplete(($1, $2) -> emitDisconnect(new CloseData(CloseFrame.NORMAL, null, false)));
 	}
 
 	public void clearKeepAlive() {
@@ -272,32 +266,23 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 				close();
 			}, 15, TimeUnit.SECONDS);
 
-			ws.sendPing(ByteBuffer.allocate(0));
+			WebSocketClient ws = this.ws;
+			if (ws != null && ws.isOpen()) ws.sendPing();
 		}, 15, TimeUnit.SECONDS);
 	}
 
-	@Override
-	public CompletionStage<?> onPong(WebSocket webSocket, ByteBuffer message) {
+	protected void onPong() {
 //		log.info("pong");
 		resetKeepAlive();
-		return null;
 	}
 
-	@Override
-	public void onOpen(WebSocket ws) {
+	protected void onOpen() {
 //		log.info("Emitting connected event");
 		eventManager.dispatch(CCEventType.CONNECTED);
-		ws.request(Long.MAX_VALUE);
 	}
 
-	@Override
-	public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
-//		log.info("Receiving text {}", data);
-		pendingText.append(data);
-		if (!last) return null;
+	protected void onText(String message) {
 		try {
-			String message = pendingText.toString();
-			pendingText = new StringBuilder();
 //			log.info("Received message {}", message);
 			SocketEvent event = JACKSON.readValue(message, SocketEvent.class);
 			switch (event.type) {
@@ -321,15 +306,15 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 					eventManager.dispatch(CCEventType.SUBSCRIBED, subscriptionPayload);
 					break;
 				case "effect-request":
-					if (!event.domain.equals("pub")) return null;
+					if (!event.domain.equals("pub")) return;
 					PublicEffectPayload requestPayload = JACKSON.treeToValue(event.payload, PublicEffectPayload.class);
-					if (!"game".equals(requestPayload.getEffect().getType())) return null;
+					if (!"game".equals(requestPayload.getEffect().getType())) return;
 					eventManager.dispatch(CCEventType.EFFECT_REQUEST, requestPayload);
 					break;
 				case "effect-failure":
-					if (!event.domain.equals("pub")) return null;
+					if (!event.domain.equals("pub")) return;
 					PublicEffectPayload failurePayload = JACKSON.treeToValue(event.payload, PublicEffectPayload.class);
-					if (!"game".equals(failurePayload.getEffect().getType())) return null;
+					if (!"game".equals(failurePayload.getEffect().getType())) return;
 					eventManager.dispatch(CCEventType.EFFECT_FAILURE, failurePayload);
 					break;
 				case "game-session-start":
@@ -344,20 +329,16 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 					log.debug("Ignoring unknown event {} on domain {}", event.type, event.domain);
 			}
 		} catch (Exception e) {
-			log.warn("Failed to handle incoming message {}", data, e);
+			log.warn("Failed to handle incoming message {}", message, e);
 		}
-		return null;
 	}
 
-	@Override
-	public CompletionStage<?> onClose(WebSocket webSocket, int statusCode, String reason) {
+	protected void onClose(int statusCode, String reason, boolean remote) {
 		log.warn("Close initiated {} {}", statusCode, reason);
-		emitDisconnect(new CloseData(statusCode, reason, true));
-		return null;
+		emitDisconnect(new CloseData(statusCode, reason, remote));
 	}
 
-	@Override
-	public void onError(WebSocket webSocket, Throwable error) {
+	protected void onError(Throwable error) {
 		log.error("An unknown WebSocket error has occurred", error);
 		this.eventManager.dispatch(CCEventType.MESSAGE, new CCMessage(CCMessage.Level.WARN, "An unknown socket error occurred"));
 	}
@@ -365,7 +346,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 	// Semi Boilerplate
 
 	public boolean canSend() {
-		return ws != null && !ws.isOutputClosed();
+		return ws != null && ws.isOpen();
 	}
 
 	public boolean canSendRPC() {
@@ -390,14 +371,13 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 
 				assert ws != null;
 
-				return ws
-					.sendText(message, true)
-					.handleAsync(($, e) -> {
-						if (e != null) throw new IllegalStateException("WebSocket failed to send message " + message.substring(0, 20), e);
-//						log.info("Sent WS message {}", message);
-						return message;
-					})
-					.join(); // this ensures the lock works as expected!
+				try {
+					ws.send(message);
+				} catch (Exception e) {
+					throw new IllegalStateException("WebSocket failed to send message " + message.substring(0, 20), e);
+				}
+//				log.info("Sent WS message {}", message);
+				return message;
 			} finally {
 				lock.unlock();
 			}
@@ -439,10 +419,12 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 			if (pendingAuthCode.isDone()) pendingAuthCode = null;
 			else return pendingAuthCode;
 		}
-		pendingAuthCode = new CompletableFuture<Void>().orTimeout(10, TimeUnit.SECONDS).handle((unused, throwable) -> null);
+		CompletableFuture<Void> authCodeFuture = new CompletableFuture<>();
+		parent.getTimedEffectPool().schedule(() -> authCodeFuture.complete(null), 10, TimeUnit.SECONDS);
+		pendingAuthCode = authCodeFuture;
 		send(new SocketRequest(GenerateAuthCodeData.ACTION, createAuthCodeData(
-			List.of("profile:read", "session:write", "session:control", "custom-effects:write"),
-			List.of(parent.getGamePackID()),
+			Arrays.asList("profile:read", "session:write", "session:control", "custom-effects:write"),
+			Collections.singletonList(parent.getGamePackID()),
 			false
 		)));
 		return pendingAuthCode;
@@ -542,7 +524,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 		if (!canSendRPC()) return CompletableFuture.completedFuture(false);
 		if (events.length == 0) return CompletableFuture.completedFuture(false);
 
-		List<CCGameEvent> list = List.of(events);
+		List<CCGameEvent> list = Collections.unmodifiableList(Arrays.asList(events.clone()));
 		return sendRPC(new CallData<>(
 			CallDataMethod.GAME_EVENT,
 			list
@@ -667,7 +649,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 			if (this.token == null) {
 				Files.deleteIfExists(tokenPath);
 			} else {
-				Files.writeString(tokenPath, token);
+				Files.write(tokenPath, token.getBytes(StandardCharsets.UTF_8));
 			}
 		} catch (Exception e) {
 			log.warn("Failed to write user {} token", uuid, e);
@@ -680,7 +662,7 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 
 		assert this.userToken != null;
 
-		Set<String> subscribeTo = new HashSet<>(Set.of(
+		Set<String> subscribeTo = new HashSet<>(Collections.singleton(
 			"pub/" + this.userToken.getId()
 		));
 
@@ -744,5 +726,40 @@ public class ConnectedPlayer implements CCPlayer, WebSocket.Listener {
 	@Override
 	public @Nullable String getGameSessionId() {
 		return gameSessionID;
+	}
+
+	/**
+	 * WebSocket client which forwards events to its parent {@link ConnectedPlayer}.
+	 */
+	protected class Client extends WebSocketClient {
+		public Client() {
+			super(URI.create(ServerURLs.PUBSUB), new Draft_6455(), Collections.singletonMap("User-Agent", "crowdcontrol4j"), 55000);
+		}
+
+		@Override
+		public void onOpen(ServerHandshake handshake) {
+			log.info("Established initial connection");
+			ConnectedPlayer.this.onOpen();
+		}
+
+		@Override
+		public void onMessage(String message) {
+			onText(message);
+		}
+
+		@Override
+		public void onWebsocketPong(org.java_websocket.WebSocket conn, Framedata f) {
+			onPong();
+		}
+
+		@Override
+		public void onClose(int code, String reason, boolean remote) {
+			ConnectedPlayer.this.onClose(code, reason, remote);
+		}
+
+		@Override
+		public void onError(Exception ex) {
+			ConnectedPlayer.this.onError(ex);
+		}
 	}
 }

@@ -7,7 +7,7 @@
 
 // name is set in settings.gradle.kts lol
 group = "dev.qixils.cc4j"
-version = "1.3.1"
+version = "1.4.0"
 
 plugins {
     // Apply the java-library plugin for API and implementation separation.
@@ -25,18 +25,17 @@ dependencies {
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
-    annotationProcessor(libs.record.builder.processor)
-    compileOnly(libs.record.builder.core)
     implementation(libs.jackson.core)
     implementation(libs.jackson.annotations)
     implementation(libs.jackson.databind)
     implementation(libs.slf4j)
+    implementation(libs.java.websocket)
     api(libs.geantyref)
     api(libs.annotations)
 }
 
 // java version
-val targetJavaVersion = 21
+val targetJavaVersion = 8
 tasks.withType<JavaCompile>().configureEach {
     options.release.set(targetJavaVersion)
     options.encoding = Charsets.UTF_8.name()
@@ -63,7 +62,7 @@ mavenPublishing {
 
     pom {
         name.set("crowdcontrol4j pubsub")
-        description.set("An implementation of the Crowd Control PubSub WebSocket protocol for Java 21+")
+        description.set("An implementation of the Crowd Control PubSub WebSocket protocol for Java 8+")
         inceptionYear.set("2024")
         url.set("https://github.com/qixils/crowdcontrol4j-pubsub")
         licenses {
